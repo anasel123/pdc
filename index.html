@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>1ère BAC EX B — Planning des devoirs</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📘</text></svg>">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!--
+  ============================================================================
+  PLANNING DES DEVOIRS — 1ère BAC EX B
+  Créé par Anas EL BIED, délégué de classe.
+  Base de données : Realtime Database.
+
+  MISE EN ROUTE :
+  1) Dans FIREBASE_CONFIG plus bas, ajoute databaseURL (Firebase Console >
+     Realtime Database > l'URL affichée en haut, du style
+     "https://pdc-bacexb-default-rtdb.europe-west1.firebasedatabase.app").
+  2) Authentication > Sign-in method > active "E-mail/Mot de passe".
+  3) Authentication > Users > "Add user" : crée TON compte délégué
+     (email + mot de passe que tu utiliseras pour te connecter sur la page).
+  4) Realtime Database > Règles, colle et publie :
+
+     {
+       "rules": {
+         "devoirs": {
+           ".read": true,
+           ".write": "auth != null"
+         }
+       }
+     }
+
+  5) Storage > Règles (pour les documents joints), colle et publie :
+
+     rules_version = '2';
+     service firebase.storage {
+       match /b/{bucket}/o {
+         match /devoirs/{allPaths=**} {
+           allow read: if true;
+           allow write: if request.auth != null;
+         }
+       }
+     }
+
+  6) Héberge ce fichier statique où tu veux (Firebase Hosting, GitHub Pages...).
+     Tu n'as jamais besoin de modifier la base à la main : tout se crée et se
+     range tout seul (semaines, jours) au fur et à mesure que tu ajoutes des
+     devoirs.
+  ============================================================================
+-->
+
+<style>
+  :root{
+    --paper: #fcfcf8;
+    --grid-line: rgba(112, 150, 196, 0.20);
+    --margin-red: #cf4a42;
+    --ink: #22304a;
+    --ink-soft: #5b6b85;
+    --ink-faint: #90a0ba;
+    --card-bg: #ffffff;
+    --card-border: rgba(34,48,74,0.12);
+    --accent: #2f6f66;
+    --accent-soft: #e4f1ee;
+    --today-border: #e3a53d;
+    --today-bg: #fff6e6;
+    --radius: 14px;
+    --ring: #d9dde3;
+    --shadow: 0 1px 2px rgba(34,48,74,0.06), 0 6px 16px rgba(34,48,74,0.06);
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    color:var(--ink);
+    font-family:'Work Sans', system-ui, sans-serif;
+    background:
+      repeating-linear-gradient(0deg, var(--grid-line) 0 1px, transparent 1px 26px),
+      repeating-linear-gradient(90deg, var(--grid-line) 0 1px, transparent 1px 26px),
+      var(--paper);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  body{ padding-left:34px; position:relative; }
+
+  body::before{
+    content:""; position:fixed; top:0; bottom:0; left:30px; width:1.5px;
+    background:var(--margin-red); opacity:0.55; z-index:1;
+  }
+  .rings{ position:fixed; top:0; left:0; bottom:0; width:30px; z-index:2; pointer-events:none; }
+  .rings span{
+    position:absolute; left:9px; width:12px; height:12px; border-radius:50%;
+    background:var(--ring);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.18), 0 1px 0 rgba(255,255,255,0.6);
+  }
+
+  main{ max-width:1080px; margin:0 auto; padding:28px 16px 90px; position:relative; z-index:3; }
+
+  header{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:18px; }
+  .titles h1{ font-family:'Patrick Hand', cursive; font-size:2.1rem; line-height:1; margin:0 0 4px; }
+  .titles .sub{ font-size:0.93rem; color:var(--ink-soft); margin:0; }
+
+  .lock-btn{
+    display:flex; align-items:center; gap:6px;
+    background:var(--card-bg); border:1px solid var(--card-border); box-shadow:var(--shadow);
+    border-radius:999px; padding:8px 14px; font-size:0.85rem; font-weight:600;
+    color:var(--ink-soft); cursor:pointer; white-space:nowrap;
+  }
+  .lock-btn.active{ color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
+
+  /* ---------- Week nav ---------- */
+  .week-nav{
+    display:flex; align-items:center; justify-content:center; gap:16px;
+    margin-bottom:20px;
+  }
+  .week-arrow{
+    width:34px; height:34px; border-radius:50%; border:1px solid var(--card-border);
+    background:var(--card-bg); box-shadow:var(--shadow); cursor:pointer;
+    font-size:1rem; color:var(--ink-soft); display:flex; align-items:center; justify-content:center;
+  }
+  .week-arrow:hover{ color:var(--accent); border-color:var(--accent); }
+  .week-info{ text-align:center; min-width:180px; }
+  .week-info .w-title{ font-family:'Patrick Hand', cursive; font-size:1.25rem; }
+  .week-info .w-range{ font-size:0.78rem; color:var(--ink-faint); }
+
+  /* ---------- Day tabs (mobile) ---------- */
+  .day-tabs{ display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:18px; scrollbar-width:none; }
+  .day-tabs::-webkit-scrollbar{ display:none; }
+  .day-tab{
+    flex:0 0 auto; position:relative; font-family:'Patrick Hand', cursive; font-size:1.1rem;
+    padding:8px 16px; border-radius:999px; border:1px solid var(--card-border);
+    background:var(--card-bg); color:var(--ink-soft); cursor:pointer;
+  }
+  .day-tab.active{ background:#22304a; color:#fff; border-color:#22304a; }
+  .day-tab.is-today:not(.active){ border-color:var(--today-border); color:#8a6112; background:var(--today-bg); }
+  .day-tab.is-past:not(.active){ color:var(--ink-faint); }
+
+  /* ---------- Board ---------- */
+  .board{ display:grid; grid-template-columns:1fr; gap:18px; }
+  .day-col{ display:none; }
+  .day-col.visible{ display:block; }
+  .day-col-inner{
+    border-radius:var(--radius);
+    padding:4px;
+  }
+  .day-col.is-today .day-col-inner{
+    border:2px solid var(--today-border);
+    background:var(--today-bg);
+    padding:10px;
+  }
+  .day-col.is-past .day-col-inner{ opacity:0.55; filter:grayscale(35%); }
+
+  .day-col-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; gap:8px; }
+  .day-col-head .dh-left{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .day-col-head h2{ font-family:'Patrick Hand', cursive; font-size:1.35rem; margin:0; }
+  .day-col-head .d-date{ font-size:0.78rem; color:var(--ink-faint); font-weight:600; }
+  .day-col-head .d-today-chip{
+    font-size:0.68rem; font-weight:700; color:#8a6112; background:#f3d98a;
+    padding:2px 8px; border-radius:999px;
+  }
+  .add-day-btn{
+    width:26px; height:26px; border-radius:50%; border:1px dashed var(--card-border);
+    background:#fff; color:var(--accent); font-size:1rem; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+  }
+  .add-day-btn:hover{ border-style:solid; border-color:var(--accent); }
+
+  .task-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+
+  .task{
+    background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:12px 14px; cursor:pointer; position:relative;
+  }
+  .task-top{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:5px; padding-right:22px; }
+  .subject-pill{ font-size:0.72rem; font-weight:700; padding:2px 9px; border-radius:999px; white-space:nowrap; }
+  .task-title{ font-weight:600; font-size:0.95rem; margin:2px 0 3px; }
+  .task-body{
+    font-size:0.85rem; color:var(--ink-soft); line-height:1.4;
+    display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .task-doc-hint{ font-size:0.72rem; color:var(--accent); font-weight:600; margin-top:6px; }
+  .task-del{
+    position:absolute; top:10px; right:10px; background:none; border:none;
+    color:var(--ink-faint); font-size:1.05rem; cursor:pointer; padding:2px 4px; line-height:1;
+  }
+  .task-del:hover{ color:var(--margin-red); }
+
+  .empty-state{
+    font-family:'Patrick Hand', cursive; font-size:0.95rem; color:var(--ink-faint); opacity:0.7;
+    text-align:center; padding:16px 10px;
+  }
+
+  /* ---------- Modals (ajout / connexion) ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(34,48,74,0.45);
+    display:none; align-items:flex-end; justify-content:center; z-index:50;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background:var(--paper); width:100%; max-width:460px; border-radius:20px 20px 0 0;
+    padding:22px 20px 26px; box-shadow:0 -8px 30px rgba(0,0,0,0.2); max-height:88vh; overflow-y:auto;
+  }
+  @media (min-width:640px){ .overlay{ align-items:center; } .modal{ border-radius:20px; } }
+  .modal h3{ font-family:'Patrick Hand', cursive; font-size:1.45rem; margin:0 0 14px; }
+  .field{ margin-bottom:13px; }
+  .field label{ display:block; font-size:0.78rem; font-weight:600; color:var(--ink-soft); margin-bottom:5px; }
+  .field input, .field textarea{
+    width:100%; font:inherit; padding:9px 11px; border-radius:10px;
+    border:1px solid var(--card-border); background:#fff; color:var(--ink);
+  }
+  .field textarea{ min-height:80px; resize:vertical; font-family:inherit; }
+
+  .subject-grid{ display:flex; flex-wrap:wrap; gap:7px; }
+  .subject-chip{
+    font-size:0.78rem; font-weight:700; padding:6px 12px; border-radius:999px;
+    border:2px solid transparent; cursor:pointer; opacity:0.55;
+  }
+  .subject-chip.selected{ opacity:1; border-color:currentColor; }
+
+  .modal-actions{ display:flex; gap:10px; margin-top:16px; }
+  .btn{ flex:1; padding:11px; border-radius:10px; border:none; font-weight:600; font-size:0.92rem; cursor:pointer; }
+  .btn-primary{ background:var(--accent); color:#fff; }
+  .btn-primary:disabled{ opacity:0.6; cursor:default; }
+  .btn-secondary{ background:#eef0f3; color:var(--ink-soft); }
+  .modal-error{ color:var(--margin-red); font-size:0.82rem; margin-top:8px; display:none; }
+
+  /* ---------- Fenêtre document (style croquis) ---------- */
+  .doc-overlay{
+    position:fixed; inset:0; background:rgba(34,48,74,0.5);
+    display:none; align-items:center; justify-content:center; z-index:60; padding:20px;
+  }
+  .doc-overlay.show{ display:flex; }
+  .doc-window{
+    background:#fffdf6;
+    width:100%; max-width:440px; max-height:82vh; overflow-y:auto;
+    padding:26px 22px 22px;
+    position:relative;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    box-shadow: 0 2px 0 var(--ink), 0 14px 34px rgba(34,48,74,0.28);
+    border: 2px solid var(--ink);
+  }
+  .doc-window::before{
+    content:"📌";
+    position:absolute; top:-16px; left:50%; transform:translateX(-50%) rotate(-8deg);
+    font-size:1.6rem;
+  }
+  .doc-close{
+    position:absolute; top:12px; right:14px;
+    background:none; border:none; font-size:1.2rem; color:var(--ink-soft); cursor:pointer;
+  }
+  .doc-subject{ margin-bottom:8px; }
+  .doc-title{ font-family:'Patrick Hand', cursive; font-size:1.5rem; margin:0 0 10px; }
+  .doc-body{ font-size:0.95rem; line-height:1.55; color:var(--ink); white-space:pre-wrap; margin-bottom:14px; }
+  .doc-file img{ max-width:100%; border-radius:10px; border:1px solid var(--card-border); }
+  .doc-file a.doc-link{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--accent-soft); color:var(--accent); font-weight:700; font-size:0.85rem;
+    padding:8px 14px; border-radius:999px; text-decoration:none;
+  }
+  .doc-footer{ margin-top:18px; text-align:center; }
+  .doc-footer .btn{ flex:none; padding:9px 24px; }
+
+  footer{ text-align:center; margin-top:36px; font-family:'Patrick Hand', cursive; font-size:1rem; color:var(--ink-faint); }
+
+  @media (min-width:860px){
+    main{ padding-left:26px; }
+    .day-tabs{ display:none; }
+    .board{ grid-template-columns:repeat(5,1fr); gap:16px; }
+    .day-col{ display:block; }
+    .titles h1{ font-size:2.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="rings" id="rings"></div>
+
+<main>
+  <header>
+    <div class="titles">
+      <h1>1ère BAC EX B</h1>
+      <p class="sub">Planning des devoirs de la classe</p>
+    </div>
+    <button class="lock-btn" id="lockBtn">🔒 Délégué</button>
+  </header>
+
+  <div class="week-nav">
+    <button class="week-arrow" id="prevWeekBtn">◀</button>
+    <div class="week-info">
+      <div class="w-title" id="weekTitle">Cette semaine</div>
+      <div class="w-range" id="weekRange"></div>
+    </div>
+    <button class="week-arrow" id="nextWeekBtn">▶</button>
+  </div>
+
+  <div class="day-tabs" id="dayTabs"></div>
+
+  <div class="board" id="board"></div>
+
+  <footer>Cahier de textes créé par Anas EL BIED — délégué de la classe ✎</footer>
+</main>
+
+<!-- Modal: ajouter un devoir -->
+<div class="overlay" id="addOverlay">
+  <div class="modal">
+    <h3 id="addModalTitle">Nouveau devoir</h3>
+    <div class="field">
+      <label>Matière</label>
+      <div class="subject-grid" id="subjectGrid"></div>
+    </div>
+    <div class="field">
+      <label>Mini-titre</label>
+      <input id="fTitle" placeholder="Ex: Exercices chapitre 3" />
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="fBody" placeholder="Détaille le devoir ici..."></textarea>
+    </div>
+    <div class="field">
+      <label>Document à joindre (optionnel)</label>
+      <input id="fFile" type="file" accept="image/*,.pdf,.doc,.docx" />
+    </div>
+    <div class="modal-error" id="addError">Merci de remplir la matière, le titre et la description.</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancelAddBtn">Annuler</button>
+      <button class="btn btn-primary" id="saveAddBtn">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: connexion délégué -->
+<div class="overlay" id="loginOverlay">
+  <div class="modal">
+    <h3>Connexion délégué</h3>
+    <div class="field"><label>E-mail</label><input id="lEmail" type="email" placeholder="ton@email.com" /></div>
+    <div class="field"><label>Mot de passe</label><input id="lPass" type="password" placeholder="••••••••" /></div>
+    <div class="modal-error" id="loginError">Identifiants incorrects.</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancelLoginBtn">Annuler</button>
+      <button class="btn btn-primary" id="doLoginBtn">Se connecter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fenêtre document -->
+<div class="doc-overlay" id="docOverlay">
+  <div class="doc-window">
+    <button class="doc-close" id="docCloseX">✕</button>
+    <div class="doc-subject"><span class="subject-pill" id="docSubjectPill"></span></div>
+    <h3 class="doc-title" id="docTitle"></h3>
+    <div class="doc-body" id="docBody"></div>
+    <div class="doc-file" id="docFile"></div>
+    <div class="doc-footer"><button class="btn btn-secondary" id="docCloseBtn">Fermer</button></div>
+  </div>
+</div>
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
+
+<script>
+/* ======================= À REMPLIR ======================= */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBdtKM4sc-nSiF9uANwJTqdWhTtxiyy4mE",
+  authDomain: "pdc-bacexb.firebaseapp.com",
+  databaseURL: "https://pdc-bacexb-default-rtdb.europe-west1.firebasedatabase.app/", // ex: https://pdc-bacexb-default-rtdb.europe-west1.firebasedatabase.app
+  projectId: "pdc-bacexb",
+  storageBucket: "pdc-bacexb.firebasestorage.app",
+  messagingSenderId: "600778545204",
+  appId: "1:600778545204:web:b1cebb63f81716334ad261"
+};
+/* ============================================================ */
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db = firebase.database();
+const storage = firebase.storage();
+
+const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
+const DAY_SHORT = ["Lun","Mar","Mer","Jeu","Ven"];
+
+const SUBJECTS = [
+  {key:"francais",  label:"Français",             bg:"#fbdbe1", fg:"#96314f"},
+  {key:"arabe",      label:"Arabe",                bg:"#d3f0e6", fg:"#0f6f5c"},
+  {key:"anglais",    label:"Anglais",              bg:"#d9e8fb", fg:"#2c5b8c"},
+  {key:"philo",      label:"Philosophie",          bg:"#e6dbf7", fg:"#5b3b8c"},
+  {key:"islamique",  label:"Éducation Islamique",  bg:"#f7e6b8", fg:"#7a5b12"},
+  {key:"maths",      label:"Maths",                bg:"#fbe0c2", fg:"#8a4b16"},
+  {key:"pc",         label:"Physique-Chimie",      bg:"#f8d0cf", fg:"#9c3b34"},
+  {key:"svt",        label:"SVT",                  bg:"#dbeece", fg:"#386b2c"},
+];
+function subjectInfo(key){ return SUBJECTS.find(s=>s.key===key) || {label:key, bg:"#eee", fg:"#555"}; }
+
+let isDelegate = false;
+let weekOffset = 0;
+let activeDay = null; // mobile tab
+let allTasks = [];    // {id, day, subject, title, body, fileURL, fileName}
+let currentWeekRef = null;
+let selectedSubjectKey = null;
+let pendingDay = 0;
+
+// ---------- Anneaux décoratifs ----------
+const ringsEl = document.getElementById('rings');
+for(let i=0;i<7;i++){
+  const s = document.createElement('span');
+  s.style.top = (60 + i*120) + 'px';
+  ringsEl.appendChild(s);
+}
+
+function pad(n){ return String(n).padStart(2,'0'); }
+function fmtDDMM(d){ return `${pad(d.getDate())}/${pad(d.getMonth()+1)}`; }
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+function mondayOf(date){
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day===0 ? -6 : 1-day;
+  d.setDate(d.getDate()+diff);
+  d.setHours(0,0,0,0);
+  return d;
+}
+function weekKeyOf(monday){ return `${monday.getFullYear()}-${pad(monday.getMonth()+1)}-${pad(monday.getDate())}`; }
+
+const today = new Date(); today.setHours(0,0,0,0);
+const thisMonday = mondayOf(today);
+if(activeDay===null){
+  const dow = today.getDay();
+  activeDay = (dow>=1 && dow<=5) ? dow-1 : 0;
+}
+
+function getDisplayedMonday(){
+  const m = new Date(thisMonday);
+  m.setDate(m.getDate() + weekOffset*7);
+  return m;
+}
+
+// ---------- Semaine : titre + écoute Firebase ----------
+const weekTitleEl = document.getElementById('weekTitle');
+const weekRangeEl = document.getElementById('weekRange');
+
+function renderWeekHeader(){
+  const monday = getDisplayedMonday();
+  const friday = new Date(monday); friday.setDate(friday.getDate()+4);
+  weekRangeEl.textContent = `${fmtDDMM(monday)} – ${fmtDDMM(friday)}`;
+  if(weekOffset===0) weekTitleEl.textContent = "Cette semaine";
+  else if(weekOffset===1) weekTitleEl.textContent = "Semaine prochaine";
+  else if(weekOffset===-1) weekTitleEl.textContent = "Semaine dernière";
+  else weekTitleEl.textContent = weekOffset>0 ? `Dans ${weekOffset} semaines` : `Il y a ${-weekOffset} semaines`;
+}
+
+function listenWeek(){
+  if(currentWeekRef) currentWeekRef.off();
+  const key = weekKeyOf(getDisplayedMonday());
+  currentWeekRef = db.ref('devoirs/'+key);
+  currentWeekRef.on('value', snap=>{
+    const val = snap.val() || {};
+    allTasks = [];
+    for(let dayIdx=0; dayIdx<5; dayIdx++){
+      const dayNode = val[dayIdx];
+      if(!dayNode) continue;
+      Object.keys(dayNode).forEach(id=>{
+        allTasks.push({ id, day: dayIdx, ...dayNode[id] });
+      });
+    }
+    renderTabs();
+    renderBoard();
+  }, err=>{
+    console.error(err);
+    document.getElementById('board').innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+      Impossible de charger les devoirs. Vérifie databaseURL et les règles Realtime Database.
+    </div>`;
+  });
+}
+
+document.getElementById('prevWeekBtn').onclick = ()=>{ weekOffset--; renderWeekHeader(); listenWeek(); };
+document.getElementById('nextWeekBtn').onclick = ()=>{ weekOffset++; renderWeekHeader(); listenWeek(); };
+
+// ---------- Day tabs (mobile) ----------
+const dayTabsEl = document.getElementById('dayTabs');
+function renderTabs(){
+  dayTabsEl.innerHTML = '';
+  const monday = getDisplayedMonday();
+  DAYS.forEach((d,i)=>{
+    const date = new Date(monday); date.setDate(date.getDate()+i);
+    const isToday = sameDay(date, today);
+    const isPast = date < today && !isToday;
+    const btn = document.createElement('button');
+    btn.className = 'day-tab' + (i===activeDay?' active':'') + (isToday?' is-today':'') + (isPast?' is-past':'');
+    btn.textContent = DAY_SHORT[i];
+    btn.onclick = ()=>{ activeDay=i; renderTabs(); renderBoard(); };
+    dayTabsEl.appendChild(btn);
+  });
+}
+
+// ---------- Board ----------
+const boardEl = document.getElementById('board');
+function renderBoard(){
+  boardEl.innerHTML = '';
+  const monday = getDisplayedMonday();
+
+  DAYS.forEach((d,i)=>{
+    const date = new Date(monday); date.setDate(date.getDate()+i);
+    const isToday = sameDay(date, today);
+    const isPast = date < today && !isToday;
+
+    const col = document.createElement('div');
+    col.className = 'day-col' + (i===activeDay?' visible':'') + (isToday?' is-today':'') + (isPast?' is-past':'');
+
+    const inner = document.createElement('div');
+    inner.className = 'day-col-inner';
+
+    const head = document.createElement('div');
+    head.className = 'day-col-head';
+    head.innerHTML = `
+      <div class="dh-left">
+        <h2>${d}</h2>
+        <span class="d-date">${fmtDDMM(date)}</span>
+        ${isToday ? '<span class="d-today-chip">Aujourd\'hui</span>' : ''}
+      </div>
+    `;
+    if(isDelegate){
+      const addBtn = document.createElement('button');
+      addBtn.className = 'add-day-btn';
+      addBtn.textContent = '＋';
+      addBtn.onclick = ()=> openAddModal(i, d, date);
+      head.appendChild(addBtn);
+    }
+    inner.appendChild(head);
+
+    const tasks = allTasks.filter(t=>t.day===i);
+    const list = document.createElement('ul');
+    list.className = 'task-list';
+
+    if(tasks.length===0){
+      const empty = document.createElement('li');
+      empty.className = 'empty-state';
+      empty.textContent = 'Rien pour l\'instant';
+      list.appendChild(empty);
+    }
+
+    tasks.forEach(t=>{
+      const li = document.createElement('li');
+      li.className = 'task';
+      const s = subjectInfo(t.subject);
+      li.innerHTML = `
+        <div class="task-top">
+          <span class="subject-pill" style="background:${s.bg};color:${s.fg}">${escapeHtml(s.label)}</span>
+        </div>
+        <div class="task-title">${escapeHtml(t.title||'')}</div>
+        <div class="task-body">${escapeHtml(t.body||'')}</div>
+        ${t.fileURL ? '<div class="task-doc-hint">📎 Clique pour voir le document</div>' : ''}
+        ${isDelegate ? '<button class="task-del" title="Supprimer">🗑</button>' : ''}
+      `;
+      li.onclick = (e)=>{
+        if(e.target.classList.contains('task-del')) return;
+        openDocViewer(t);
+      };
+      if(isDelegate){
+        li.querySelector('.task-del').onclick = (e)=>{
+          e.stopPropagation();
+          if(confirm('Supprimer ce devoir ?')){
+            const key = weekKeyOf(getDisplayedMonday());
+            db.ref(`devoirs/${key}/${t.day}/${t.id}`).remove();
+          }
+        };
+      }
+      list.appendChild(li);
+    });
+
+    inner.appendChild(list);
+    col.appendChild(inner);
+    boardEl.appendChild(col);
+  });
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ---------- Fenêtre document ----------
+const docOverlay = document.getElementById('docOverlay');
+function openDocViewer(t){
+  const s = subjectInfo(t.subject);
+  document.getElementById('docSubjectPill').textContent = s.label;
+  document.getElementById('docSubjectPill').style.background = s.bg;
+  document.getElementById('docSubjectPill').style.color = s.fg;
+  document.getElementById('docTitle').textContent = t.title || '';
+  document.getElementById('docBody').textContent = t.body || '';
+  const fileEl = document.getElementById('docFile');
+  fileEl.innerHTML = '';
+  if(t.fileURL){
+    const isImg = /\.(jpe?g|png|gif|webp)$/i.test(t.fileName||t.fileURL);
+    if(isImg){
+      const a = document.createElement('a');
+      a.href = t.fileURL; a.target = '_blank'; a.rel='noopener';
+      const img = document.createElement('img');
+      img.src = t.fileURL;
+      a.appendChild(img);
+      fileEl.appendChild(a);
+    } else {
+      const a = document.createElement('a');
+      a.href = t.fileURL; a.target='_blank'; a.rel='noopener'; a.className='doc-link';
+      a.textContent = '📎 Ouvrir le document';
+      fileEl.appendChild(a);
+    }
+  }
+  docOverlay.classList.add('show');
+}
+document.getElementById('docCloseBtn').onclick = ()=> docOverlay.classList.remove('show');
+document.getElementById('docCloseX').onclick = ()=> docOverlay.classList.remove('show');
+docOverlay.onclick = (e)=>{ if(e.target===docOverlay) docOverlay.classList.remove('show'); };
+
+// ---------- Auth ----------
+const lockBtn = document.getElementById('lockBtn');
+auth.onAuthStateChanged(user=>{
+  isDelegate = !!user;
+  lockBtn.textContent = isDelegate ? '🔓 Déconnexion' : '🔒 Délégué';
+  lockBtn.classList.toggle('active', isDelegate);
+  renderBoard();
+});
+lockBtn.onclick = ()=>{
+  if(isDelegate) auth.signOut();
+  else document.getElementById('loginOverlay').classList.add('show');
+};
+document.getElementById('cancelLoginBtn').onclick = ()=> document.getElementById('loginOverlay').classList.remove('show');
+document.getElementById('doLoginBtn').onclick = ()=>{
+  const email = document.getElementById('lEmail').value.trim();
+  const pass = document.getElementById('lPass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(()=>{
+      document.getElementById('loginOverlay').classList.remove('show');
+      document.getElementById('lEmail').value=''; document.getElementById('lPass').value='';
+    })
+    .catch(()=>{ errEl.style.display='block'; });
+};
+
+// ---------- Ajout de devoir ----------
+const addOverlay = document.getElementById('addOverlay');
+const subjectGrid = document.getElementById('subjectGrid');
+SUBJECTS.forEach(s=>{
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'subject-chip';
+  chip.textContent = s.label;
+  chip.style.background = s.bg;
+  chip.style.color = s.fg;
+  chip.onclick = ()=>{
+    selectedSubjectKey = s.key;
+    [...subjectGrid.children].forEach(c=>c.classList.remove('selected'));
+    chip.classList.add('selected');
+  };
+  subjectGrid.appendChild(chip);
+});
+
+function openAddModal(dayIdx, dayLabel, date){
+  pendingDay = dayIdx;
+  selectedSubjectKey = null;
+  [...subjectGrid.children].forEach(c=>c.classList.remove('selected'));
+  document.getElementById('fTitle').value = '';
+  document.getElementById('fBody').value = '';
+  document.getElementById('fFile').value = '';
+  document.getElementById('addError').style.display = 'none';
+  document.getElementById('addModalTitle').textContent = `Ajouter — ${dayLabel} ${fmtDDMM(date)}`;
+  addOverlay.classList.add('show');
+}
+document.getElementById('cancelAddBtn').onclick = ()=> addOverlay.classList.remove('show');
+
+document.getElementById('saveAddBtn').onclick = ()=>{
+  const title = document.getElementById('fTitle').value.trim();
+  const body = document.getElementById('fBody').value.trim();
+  const fileInput = document.getElementById('fFile');
+  const file = fileInput.files[0];
+  const errEl = document.getElementById('addError');
+
+  if(!selectedSubjectKey || !title || !body){
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  const saveBtn = document.getElementById('saveAddBtn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Ajout...';
+
+  const weekKey = weekKeyOf(getDisplayedMonday());
+  const newRef = db.ref(`devoirs/${weekKey}/${pendingDay}`).push();
+
+  const entry = {
+    subject: selectedSubjectKey,
+    title, body,
+    createdAt: firebase.database.ServerValue.TIMESTAMP
+  };
+
+  function finalize(){
+    newRef.set(entry).then(()=>{
+      addOverlay.classList.remove('show');
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Ajouter';
+    }).catch(()=>{
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Ajouter';
+      alert("Erreur lors de l'ajout. Vérifie les règles Realtime Database.");
+    });
+  }
+
+  if(file){
+    const path = `devoirs/${weekKey}/${pendingDay}/${newRef.key}/${file.name}`;
+    storage.ref(path).put(file).then(snap=>snap.ref.getDownloadURL()).then(url=>{
+      entry.fileURL = url;
+      entry.fileName = file.name;
+      finalize();
+    }).catch(()=>{
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Ajouter';
+      alert("Erreur lors de l'envoi du document. Vérifie les règles Storage.");
+    });
+  } else {
+    finalize();
+  }
+};
+
+renderWeekHeader();
+renderTabs();
+renderBoard();
+listenWeek();
+</script>
+</body>
+</html>
