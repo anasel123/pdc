@@ -30,21 +30,16 @@
          "devoirs": {
            ".read": true,
            ".write": "auth != null"
+         },
+         "emploiDuTemps": {
+           ".read": true,
+           ".write": "auth != null"
          }
        }
      }
 
-  5) Storage > Règles (pour les documents joints), colle et publie :
-
-     rules_version = '2';
-     service firebase.storage {
-       match /b/{bucket}/o {
-         match /devoirs/{allPaths=**} {
-           allow read: if true;
-           allow write: if request.auth != null;
-         }
-       }
-     }
+  5) Les documents joints (15 Mo maximum) sont stockés directement dans
+     Realtime Database : aucune configuration Storage n'est nécessaire.
 
   6) Héberge ce fichier statique où tu veux (Firebase Hosting, GitHub Pages...).
      Tu n'as jamais besoin de modifier la base à la main : tout se crée et se
@@ -111,6 +106,13 @@
     color:var(--ink-soft); cursor:pointer; white-space:nowrap;
   }
   .lock-btn.active{ color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
+  .header-actions{ display:flex; align-items:center; gap:8px; }
+  .schedule-btn{
+    width:38px; height:38px; border:1px solid var(--card-border); border-radius:50%;
+    background:var(--card-bg); color:var(--accent); box-shadow:var(--shadow);
+    font-weight:700; font-size:1rem; cursor:pointer;
+  }
+  .schedule-btn:hover{ border-color:var(--accent); background:var(--accent-soft); }
 
   /* ---------- Week nav ---------- */
   .week-nav{
@@ -256,6 +258,10 @@
   .doc-title{ font-family:'Patrick Hand', cursive; font-size:1.5rem; margin:0 0 10px; }
   .doc-body{ font-size:0.95rem; line-height:1.55; color:var(--ink); white-space:pre-wrap; margin-bottom:14px; }
   .doc-file img{ max-width:100%; border-radius:10px; border:1px solid var(--card-border); }
+  .schedule-image{ display:block; width:100%; max-height:62vh; object-fit:contain; border-radius:10px; border:1px solid var(--card-border); background:#fff; }
+  .schedule-empty{ color:var(--ink-soft); text-align:center; padding:22px 8px; }
+  .schedule-upload{ display:none; margin-top:12px; }
+  .schedule-upload.show{ display:block; }
   .doc-file a.doc-link{
     display:inline-flex; align-items:center; gap:6px;
     background:var(--accent-soft); color:var(--accent); font-weight:700; font-size:0.85rem;
@@ -285,7 +291,10 @@
       <h1>1ère BAC EX B</h1>
       <p class="sub">Planning des devoirs de la classe</p>
     </div>
-    <button class="lock-btn" id="lockBtn">🔒 Délégué</button>
+    <div class="header-actions">
+      <button class="schedule-btn" id="scheduleBtn" title="Emploi du temps">E</button>
+      <button class="lock-btn" id="lockBtn">🔒 Délégué</button>
+    </div>
   </header>
 
   <div class="week-nav">
@@ -358,11 +367,31 @@
   </div>
 </div>
 
+<!-- Fenêtre emploi du temps -->
+<div class="doc-overlay" id="scheduleOverlay">
+  <div class="doc-window">
+    <button class="doc-close" id="scheduleCloseX">✕</button>
+    <h3 class="doc-title">Emploi du temps</h3>
+    <div id="scheduleContent" class="schedule-empty">Aucun emploi du temps ajouté.</div>
+    <div class="schedule-upload" id="scheduleUpload">
+      <input id="scheduleFile" type="file" accept="image/*" />
+      <div class="modal-error" id="scheduleError"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="scheduleCancelBtn">Annuler</button>
+        <button class="btn btn-primary" id="scheduleSaveBtn">Enregistrer</button>
+      </div>
+    </div>
+    <div class="doc-footer">
+      <button class="btn btn-primary" id="scheduleEditBtn" hidden>Modifier</button>
+      <button class="btn btn-secondary" id="scheduleCloseBtn">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
 
 <script>
 /* ======================= À REMPLIR ======================= */
@@ -380,7 +409,7 @@ const FIREBASE_CONFIG = {
 firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db = firebase.database();
-const storage = firebase.storage();
+const scheduleRef = db.ref('emploiDuTemps');
 
 const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
 const DAY_SHORT = ["Lun","Mar","Mer","Jeu","Ven"];
@@ -404,6 +433,7 @@ let allTasks = [];    // {id, day, subject, title, body, fileURL, fileName}
 let currentWeekRef = null;
 let selectedSubjectKey = null;
 let pendingDay = 0;
+let scheduleData = null;
 
 // ---------- Anneaux décoratifs ----------
 const ringsEl = document.getElementById('rings');
@@ -617,6 +647,80 @@ document.getElementById('docCloseBtn').onclick = ()=> docOverlay.classList.remov
 document.getElementById('docCloseX').onclick = ()=> docOverlay.classList.remove('show');
 docOverlay.onclick = (e)=>{ if(e.target===docOverlay) docOverlay.classList.remove('show'); };
 
+// ---------- Emploi du temps ----------
+const scheduleOverlay = document.getElementById('scheduleOverlay');
+const scheduleContent = document.getElementById('scheduleContent');
+const scheduleUpload = document.getElementById('scheduleUpload');
+const scheduleEditBtn = document.getElementById('scheduleEditBtn');
+const scheduleFile = document.getElementById('scheduleFile');
+const scheduleError = document.getElementById('scheduleError');
+
+function renderSchedule(){
+  scheduleContent.innerHTML = '';
+  if(scheduleData){
+    const image = document.createElement('img');
+    image.className = 'schedule-image';
+    image.src = scheduleData;
+    image.alt = 'Emploi du temps de la classe';
+    scheduleContent.appendChild(image);
+  } else {
+    scheduleContent.textContent = 'Aucun emploi du temps ajouté.';
+    scheduleContent.className = 'schedule-empty';
+  }
+  scheduleEditBtn.hidden = !isDelegate;
+}
+
+scheduleRef.on('value', snap=>{
+  scheduleData = snap.val() || null;
+  renderSchedule();
+});
+document.getElementById('scheduleBtn').onclick = ()=>{
+  scheduleUpload.classList.remove('show');
+  renderSchedule();
+  scheduleOverlay.classList.add('show');
+};
+scheduleEditBtn.onclick = ()=>{
+  scheduleFile.value = '';
+  scheduleError.style.display = 'none';
+  scheduleUpload.classList.add('show');
+};
+document.getElementById('scheduleCancelBtn').onclick = ()=> scheduleUpload.classList.remove('show');
+document.getElementById('scheduleCloseBtn').onclick = ()=> scheduleOverlay.classList.remove('show');
+document.getElementById('scheduleCloseX').onclick = ()=> scheduleOverlay.classList.remove('show');
+scheduleOverlay.onclick = (e)=>{ if(e.target===scheduleOverlay) scheduleOverlay.classList.remove('show'); };
+document.getElementById('scheduleSaveBtn').onclick = ()=>{
+  const file = scheduleFile.files[0];
+  if(!file || !file.type.startsWith('image/')){
+    scheduleError.textContent = 'Choisis une image.';
+    scheduleError.style.display = 'block';
+    return;
+  }
+  if(file.size > 15 * 1024 * 1024){
+    scheduleError.textContent = 'L’image doit faire 15 Mo maximum.';
+    scheduleError.style.display = 'block';
+    return;
+  }
+  const saveBtn = document.getElementById('scheduleSaveBtn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Enregistrement...';
+  const reader = new FileReader();
+  reader.onload = ()=> scheduleRef.set(reader.result).then(()=>{
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Enregistrer';
+    scheduleUpload.classList.remove('show');
+  }).catch(()=>{
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Enregistrer';
+    alert('Erreur. Vérifie les règles Realtime Database.');
+  });
+  reader.onerror = ()=>{
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Enregistrer';
+    alert('Erreur lors de la lecture de l’image.');
+  };
+  reader.readAsDataURL(file);
+};
+
 // ---------- Auth ----------
 const lockBtn = document.getElementById('lockBtn');
 auth.onAuthStateChanged(user=>{
@@ -624,6 +728,7 @@ auth.onAuthStateChanged(user=>{
   lockBtn.textContent = isDelegate ? '🔓 Déconnexion' : '🔒 Délégué';
   lockBtn.classList.toggle('active', isDelegate);
   renderBoard();
+  renderSchedule();
 });
 lockBtn.onclick = ()=>{
   if(isDelegate) auth.signOut();
@@ -685,6 +790,11 @@ document.getElementById('saveAddBtn').onclick = ()=>{
     errEl.style.display = 'block';
     return;
   }
+  if(file && file.size > 15 * 1024 * 1024){
+    errEl.textContent = 'Le document doit faire 15 Mo maximum.';
+    errEl.style.display = 'block';
+    return;
+  }
   errEl.style.display = 'none';
 
   const saveBtn = document.getElementById('saveAddBtn');
@@ -713,16 +823,18 @@ document.getElementById('saveAddBtn').onclick = ()=>{
   }
 
   if(file){
-    const path = `devoirs/${weekKey}/${pendingDay}/${newRef.key}/${file.name}`;
-    storage.ref(path).put(file).then(snap=>snap.ref.getDownloadURL()).then(url=>{
-      entry.fileURL = url;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      entry.fileURL = reader.result;
       entry.fileName = file.name;
       finalize();
-    }).catch(()=>{
+    };
+    reader.onerror = ()=>{
       saveBtn.disabled = false;
       saveBtn.textContent = 'Ajouter';
-      alert("Erreur lors de l'envoi du document. Vérifie les règles Storage.");
-    });
+      alert("Erreur lors de la lecture du document.");
+    };
+    reader.readAsDataURL(file);
   } else {
     finalize();
   }
