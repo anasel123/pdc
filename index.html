@@ -93,7 +93,7 @@
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.18), 0 1px 0 rgba(255,255,255,0.6);
   }
 
-  main{ max-width:1080px; margin:0 auto; padding:28px 16px 90px; position:relative; z-index:3; }
+  main{ max-width:1080px; min-height:100vh; margin:0 auto; padding:28px 16px 0; position:relative; z-index:3; display:flex; flex-direction:column; }
 
   header{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:18px; }
   .titles h1{ font-family:'Patrick Hand', cursive; font-size:2.1rem; line-height:1; margin:0 0 4px; }
@@ -270,7 +270,18 @@
   .doc-footer{ margin-top:18px; text-align:center; }
   .doc-footer .btn{ flex:none; padding:9px 24px; }
 
-  footer{ text-align:center; margin-top:36px; font-family:'Patrick Hand', cursive; font-size:1rem; color:var(--ink-faint); }
+  footer{ margin-top:auto; padding-top:34px; padding-bottom:0; text-align:center; font-family:'Patrick Hand', cursive; color:var(--ink-faint); }
+  .footer-credit{ font-size:1rem; margin-bottom:5px; }
+  .footer-managed{ font-size:0.95rem; color:var(--ink-soft); }
+  .footer-signature{ display:flex; justify-content:center; align-items:flex-end; gap:14px; margin-top:8px; }
+  .footer-texts{ display:flex; flex-direction:column; align-items:center; gap:4px; transform:translateY(-20px); }
+  .footer-texts .footer-credit{ order:2; margin:0; font-size:0.86rem; }
+  .footer-texts .footer-managed{ order:1; }
+  .footer-photo-frame{ width:86px; height:106px; overflow:hidden; flex:0 0 auto; }
+  .footer-photo{ width:100%; height:100%; object-fit:cover; object-position:center 15%; border:0; background:transparent; color:var(--accent); font-family:'Patrick Hand', cursive; font-size:1.35rem; box-shadow:none; }
+  .footer-photo.ghita-photo{ transform:translateY(-5px) scale(1.75); transform-origin:center 15%; }
+  .footer-photo-fallback{ display:flex; align-items:center; justify-content:center; }
+  @media (max-width:520px){ .footer-signature{ gap:8px; } .footer-photo-frame{ width:64px; height:82px; } }
 
   @media (min-width:860px){
     main{ padding-left:26px; }
@@ -310,7 +321,20 @@
 
   <div class="board" id="board"></div>
 
-  <footer>Cahier de textes créé par Anas EL BIED — délégué de la classe ✎</footer>
+  <footer>
+    <div class="footer-signature" aria-label="Anas et Ghita BIADI">
+      <div class="footer-photo-frame">
+        <img class="footer-photo ghita-photo" src="ghita.png" alt="Photo de Ghita BIADI" onerror="this.style.display='none'">
+      </div>
+      <div class="footer-texts">
+        <div class="footer-managed">Géré par Anas EL BIED et Ghita BIADI</div>
+        <div class="footer-credit">Cahier de textes créé par Anas EL BIED — délégué de la classe ✎</div>
+      </div>
+      <div class="footer-photo-frame">
+        <img class="footer-photo" src="anas.png" alt="Photo d’Anas" onerror="this.style.display='none'">
+      </div>
+    </div>
+  </footer>
 </main>
 
 <!-- Modal: ajouter un devoir -->
@@ -420,6 +444,7 @@ const SUBJECTS = [
   {key:"anglais",    label:"Anglais",              bg:"#d9e8fb", fg:"#2c5b8c"},
   {key:"philo",      label:"Philosophie",          bg:"#e6dbf7", fg:"#5b3b8c"},
   {key:"islamique",  label:"Éducation Islamique",  bg:"#f7e6b8", fg:"#7a5b12"},
+  {key:"histoire-geo", label:"Histoire-géo",         bg:"#e8d7c4", fg:"#795548"},
   {key:"maths",      label:"Maths",                bg:"#fbe0c2", fg:"#8a4b16"},
   {key:"pc",         label:"Physique-Chimie",      bg:"#f8d0cf", fg:"#9c3b34"},
   {key:"svt",        label:"SVT",                  bg:"#dbeece", fg:"#386b2c"},
@@ -457,9 +482,10 @@ function mondayOf(date){
 function weekKeyOf(monday){ return `${monday.getFullYear()}-${pad(monday.getMonth()+1)}-${pad(monday.getDate())}`; }
 
 const today = new Date(); today.setHours(0,0,0,0);
+const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
 const thisMonday = mondayOf(today);
 if(activeDay===null){
-  const dow = today.getDay();
+  const dow = tomorrow.getDay();
   activeDay = (dow>=1 && dow<=5) ? dow-1 : 0;
 }
 
@@ -517,10 +543,10 @@ function renderTabs(){
   const monday = getDisplayedMonday();
   DAYS.forEach((d,i)=>{
     const date = new Date(monday); date.setDate(date.getDate()+i);
-    const isToday = sameDay(date, today);
-    const isPast = date < today && !isToday;
+    const isFocusDay = sameDay(date, tomorrow);
+    const isPast = date < tomorrow && !isFocusDay;
     const btn = document.createElement('button');
-    btn.className = 'day-tab' + (i===activeDay?' active':'') + (isToday?' is-today':'') + (isPast?' is-past':'');
+    btn.className = 'day-tab' + (i===activeDay?' active':'') + (isFocusDay?' is-today':'') + (isPast?' is-past':'');
     btn.textContent = DAY_SHORT[i];
     btn.onclick = ()=>{ activeDay=i; renderTabs(); renderBoard(); };
     dayTabsEl.appendChild(btn);
@@ -535,11 +561,11 @@ function renderBoard(){
 
   DAYS.forEach((d,i)=>{
     const date = new Date(monday); date.setDate(date.getDate()+i);
-    const isToday = sameDay(date, today);
-    const isPast = date < today && !isToday;
+    const isFocusDay = sameDay(date, tomorrow);
+    const isPast = date < tomorrow && !isFocusDay;
 
     const col = document.createElement('div');
-    col.className = 'day-col' + (i===activeDay?' visible':'') + (isToday?' is-today':'') + (isPast?' is-past':'');
+    col.className = 'day-col' + (i===activeDay?' visible':'') + (isFocusDay?' is-today':'') + (isPast?' is-past':'');
 
     const inner = document.createElement('div');
     inner.className = 'day-col-inner';
@@ -550,7 +576,7 @@ function renderBoard(){
       <div class="dh-left">
         <h2>${d}</h2>
         <span class="d-date">${fmtDDMM(date)}</span>
-        ${isToday ? '<span class="d-today-chip">Aujourd\'hui</span>' : ''}
+        ${isFocusDay ? '<span class="d-today-chip">Demain</span>' : ''}
       </div>
     `;
     if(isDelegate){
