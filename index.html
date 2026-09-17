@@ -1404,7 +1404,14 @@ async function sendIhfChatMessage(){
     addIhfChatMessage(answer, 'assistant');
   }catch(error){
     ihfChatHistory.pop();
-    const errorMessage = window.location.protocol === 'file:'
+    const errorText = String(error.message || '').toLowerCase();
+    const isQuotaError = errorText.includes('quota exceeded')
+      || errorText.includes('resource_exhausted')
+      || errorText.includes('generate_content_free_tier_requests')
+      || errorText.includes('429');
+    const errorMessage = isQuotaError
+      ? 'I answered a lot of people today comeback tmrw !'
+      : window.location.protocol === 'file:'
       ? 'Ouvre la page avec un serveur local ou sur ton hébergement : Gemini bloque parfois les requêtes depuis file://.'
       : `Erreur Gemini : ${error.message}`;
     addIhfChatMessage(errorMessage, 'assistant');
