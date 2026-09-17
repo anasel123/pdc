@@ -34,6 +34,10 @@
          "emploiDuTemps": {
            ".read": true,
            ".write": "auth != null"
+         },
+         "annonces": {
+           ".read": true,
+           ".write": "auth != null"
          }
        }
      }
@@ -196,6 +200,23 @@
     text-align:center; padding:16px 10px;
   }
 
+  /* ---------- Annonces ---------- */
+  .announcements-section{ margin-top:34px; }
+  .announcements-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+  .announcements-title{ font-family:'Patrick Hand', cursive; font-size:1.65rem; margin:0; }
+  .announcement-add{ padding:8px 13px; border:1px solid var(--accent); border-radius:999px; background:var(--accent-soft); color:var(--accent); font:600 0.82rem 'Work Sans', sans-serif; cursor:pointer; }
+  .announcement-add:hover{ background:#d4e9e4; }
+  .announcement-list{ display:grid; grid-template-columns:1fr; gap:12px; }
+  .announcement-card{ background:var(--card-bg); border:1px solid var(--card-border); border-left:4px solid var(--accent); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; position:relative; cursor:pointer; }
+  .announcement-card:hover{ border-color:var(--accent); }
+  .announcement-meta{ color:var(--ink-faint); font-size:0.72rem; margin-bottom:5px; }
+  .announcement-card h3{ font-size:1rem; margin:0 28px 5px 0; }
+  .announcement-card p{ color:var(--ink-soft); font-size:0.85rem; line-height:1.4; margin:0; white-space:pre-wrap; display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .announcement-file{ color:var(--accent); font-size:0.72rem; font-weight:600; margin-top:8px; }
+  .announcement-del{ position:absolute; top:10px; right:10px; background:none; border:none; color:var(--ink-faint); cursor:pointer; font-size:1rem; }
+  .announcement-del:hover{ color:var(--margin-red); }
+  @media (min-width:640px){ .announcement-list{ grid-template-columns:repeat(2,1fr); } }
+
   /* ---------- Modals (ajout / connexion) ---------- */
   .overlay{
     position:fixed; inset:0; background:rgba(34,48,74,0.45);
@@ -321,6 +342,16 @@
 
   <div class="board" id="board"></div>
 
+  <section class="announcements-section" aria-labelledby="announcementsTitle">
+    <div class="announcements-head">
+      <h2 class="announcements-title" id="announcementsTitle">Annonces</h2>
+      <button class="announcement-add" id="announcementAddBtn" hidden>＋ Publier</button>
+    </div>
+    <div class="announcement-list" id="announcementList">
+      <div class="empty-state">Aucune annonce pour l'instant</div>
+    </div>
+  </section>
+
   <footer>
     <div class="footer-signature" aria-label="Anas et Ghita BIADI">
       <div class="footer-photo-frame">
@@ -361,6 +392,22 @@
     <div class="modal-actions">
       <button class="btn btn-secondary" id="cancelAddBtn">Annuler</button>
       <button class="btn btn-primary" id="saveAddBtn">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: publier une annonce -->
+<div class="overlay" id="announcementOverlay">
+  <div class="modal">
+    <h3>Nouvelle annonce</h3>
+    <div class="field"><label>Nom</label><input id="announcementName" placeholder="Ex: Le délégué" /></div>
+    <div class="field"><label>Titre</label><input id="announcementTitle" placeholder="Ex: Réunion de classe" /></div>
+    <div class="field"><label>Annonce</label><textarea id="announcementBody" placeholder="Écris ton annonce ici..."></textarea></div>
+    <div class="field"><label>Fichier à joindre (optionnel)</label><input id="announcementFile" type="file" accept="image/*,.pdf,.doc,.docx" /></div>
+    <div class="modal-error" id="announcementError">Merci de remplir le nom, le titre et l'annonce.</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancelAnnouncementBtn">Annuler</button>
+      <button class="btn btn-primary" id="saveAnnouncementBtn">Publier</button>
     </div>
   </div>
 </div>
@@ -434,6 +481,7 @@ firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db = firebase.database();
 const scheduleRef = db.ref('emploiDuTemps');
+const announcementsRef = db.ref('annonces');
 
 const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
 const DAY_SHORT = ["Lun","Mar","Mer","Jeu","Ven"];
@@ -459,6 +507,7 @@ let currentWeekRef = null;
 let selectedSubjectKey = null;
 let pendingDay = 0;
 let scheduleData = null;
+let announcements = [];
 
 // ---------- Anneaux décoratifs ----------
 const ringsEl = document.getElementById('rings');
@@ -640,6 +689,112 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
+// ---------- Annonces ----------
+const announcementList = document.getElementById('announcementList');
+const announcementAddBtn = document.getElementById('announcementAddBtn');
+const announcementOverlay = document.getElementById('announcementOverlay');
+
+function renderAnnouncements(){
+  announcementList.innerHTML = '';
+  if(announcements.length===0){
+    announcementList.innerHTML = '<div class="empty-state">Aucune annonce pour l\'instant</div>';
+    return;
+  }
+  announcements.forEach(announcement=>{
+    const card = document.createElement('article');
+    card.className = 'announcement-card';
+    card.innerHTML = `
+      <div class="announcement-meta">${escapeHtml(announcement.name || 'Délégué')}</div>
+      <h3>${escapeHtml(announcement.title || '')}</h3>
+      <p>${escapeHtml(announcement.body || '')}</p>
+      ${announcement.fileURL ? '<div class="announcement-file">📎 Fichier joint — cliquer pour ouvrir</div>' : ''}
+      ${isDelegate ? '<button class="announcement-del" title="Supprimer">🗑</button>' : ''}
+    `;
+    card.onclick = event=>{
+      if(event.target.classList.contains('announcement-del')) return;
+      openAnnouncementViewer(announcement);
+    };
+    if(isDelegate){
+      card.querySelector('.announcement-del').onclick = event=>{
+        event.stopPropagation();
+        if(confirm('Supprimer cette annonce ?')) announcementsRef.child(announcement.id).remove();
+      };
+    }
+    announcementList.appendChild(card);
+  });
+}
+
+announcementsRef.on('value', snap=>{
+  const value = snap.val() || {};
+  announcements = Object.keys(value).map(id=>({id, ...value[id]}))
+    .sort((a,b)=>(b.createdAt || 0) - (a.createdAt || 0));
+  renderAnnouncements();
+}, err=>{
+  announcementList.innerHTML = '<div class="empty-state">Impossible de charger les annonces.</div>';
+  console.error(err);
+});
+
+function openAnnouncementViewer(announcement){
+  document.getElementById('docSubjectPill').textContent = announcement.name || 'Délégué';
+  document.getElementById('docSubjectPill').style.background = 'var(--accent-soft)';
+  document.getElementById('docSubjectPill').style.color = 'var(--accent)';
+  document.getElementById('docTitle').textContent = announcement.title || '';
+  document.getElementById('docBody').textContent = announcement.body || '';
+  const fileEl = document.getElementById('docFile');
+  fileEl.innerHTML = '';
+  if(announcement.fileURL){
+    const isImg = /\.(jpe?g|png|gif|webp)$/i.test(announcement.fileName || announcement.fileURL);
+    const link = document.createElement('a');
+    link.href = announcement.fileURL; link.target = '_blank'; link.rel = 'noopener';
+    if(isImg){
+      const image = document.createElement('img');
+      image.src = announcement.fileURL;
+      link.appendChild(image);
+    } else {
+      link.className = 'doc-link';
+      link.textContent = '📎 Ouvrir le fichier';
+    }
+    fileEl.appendChild(link);
+  }
+  docOverlay.classList.add('show');
+}
+
+announcementAddBtn.onclick = ()=>{
+  document.getElementById('announcementName').value = '';
+  document.getElementById('announcementTitle').value = '';
+  document.getElementById('announcementBody').value = '';
+  document.getElementById('announcementFile').value = '';
+  document.getElementById('announcementError').style.display = 'none';
+  announcementOverlay.classList.add('show');
+};
+document.getElementById('cancelAnnouncementBtn').onclick = ()=> announcementOverlay.classList.remove('show');
+announcementOverlay.onclick = event=>{ if(event.target===announcementOverlay) announcementOverlay.classList.remove('show'); };
+document.getElementById('saveAnnouncementBtn').onclick = ()=>{
+  const name = document.getElementById('announcementName').value.trim();
+  const title = document.getElementById('announcementTitle').value.trim();
+  const body = document.getElementById('announcementBody').value.trim();
+  const file = document.getElementById('announcementFile').files[0];
+  const error = document.getElementById('announcementError');
+  if(!name || !title || !body){ error.textContent = 'Merci de remplir le nom, le titre et l\'annonce.'; error.style.display = 'block'; return; }
+  if(file && file.size > 15 * 1024 * 1024){ error.textContent = 'Le fichier doit faire 15 Mo maximum.'; error.style.display = 'block'; return; }
+  error.style.display = 'none';
+  const saveBtn = document.getElementById('saveAnnouncementBtn');
+  saveBtn.disabled = true; saveBtn.textContent = 'Publication...';
+  const entry = {name, title, body, createdAt: firebase.database.ServerValue.TIMESTAMP};
+  const publish = ()=> announcementsRef.push(entry).then(()=>{
+    announcementOverlay.classList.remove('show'); saveBtn.disabled = false; saveBtn.textContent = 'Publier';
+  }).catch(()=>{
+    saveBtn.disabled = false; saveBtn.textContent = 'Publier';
+    alert('Erreur lors de la publication. Vérifie les règles Realtime Database.');
+  });
+  if(file){
+    const reader = new FileReader();
+    reader.onload = ()=>{ entry.fileURL = reader.result; entry.fileName = file.name; publish(); };
+    reader.onerror = ()=>{ saveBtn.disabled = false; saveBtn.textContent = 'Publier'; alert('Erreur lors de la lecture du fichier.'); };
+    reader.readAsDataURL(file);
+  } else publish();
+};
+
 // ---------- Fenêtre document ----------
 const docOverlay = document.getElementById('docOverlay');
 function openDocViewer(t){
@@ -751,10 +906,12 @@ document.getElementById('scheduleSaveBtn').onclick = ()=>{
 const lockBtn = document.getElementById('lockBtn');
 auth.onAuthStateChanged(user=>{
   isDelegate = !!user;
+  announcementAddBtn.hidden = !isDelegate;
   lockBtn.textContent = isDelegate ? '🔓 Déconnexion' : '🔒 Délégué';
   lockBtn.classList.toggle('active', isDelegate);
   renderBoard();
   renderSchedule();
+  renderAnnouncements();
 });
 lockBtn.onclick = ()=>{
   if(isDelegate) auth.signOut();
