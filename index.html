@@ -38,6 +38,18 @@
          "annonces": {
            ".read": true,
            ".write": "auth != null"
+         },
+         "ihfcode": {
+           ".read": true,
+           ".write": "auth != null"
+         },
+         "classInfos": {
+           ".read": true,
+           ".write": "auth != null"
+         },
+         "propositions": {
+           ".read": true,
+           ".write": true
          }
        }
      }
@@ -111,12 +123,98 @@
   }
   .lock-btn.active{ color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
   .header-actions{ display:flex; align-items:center; gap:8px; }
-  .schedule-btn{
+  .menu-wrap{ position:relative; }
+  .menu-btn{
     width:38px; height:38px; border:1px solid var(--card-border); border-radius:50%;
     background:var(--card-bg); color:var(--accent); box-shadow:var(--shadow);
-    font-weight:700; font-size:1rem; cursor:pointer;
+    font-size:1.25rem; line-height:1; cursor:pointer;
   }
-  .schedule-btn:hover{ border-color:var(--accent); background:var(--accent-soft); }
+  .menu-btn:hover, .menu-btn.open{ border-color:var(--accent); background:var(--accent-soft); }
+  .menu-panel{
+    position:absolute; top:46px; right:0; z-index:20; display:none; min-width:190px;
+    padding:6px; background:var(--card-bg); border:1px solid var(--card-border);
+    border-radius:12px; box-shadow:var(--shadow);
+  }
+  .menu-panel.show{ display:flex; flex-direction:column; gap:3px; }
+  .menu-item{
+    width:100%; padding:10px 12px; border:0; border-radius:8px; background:transparent;
+    color:var(--ink); text-align:left; font:500 0.84rem 'Work Sans', sans-serif; cursor:pointer;
+  }
+  .menu-item:hover{ background:var(--accent-soft); color:var(--accent); }
+  .menu-item.empty{ min-height:38px; cursor:default; }
+  .menu-item.empty:hover{ background:transparent; color:var(--ink); }
+  .class-info-page{ display:none; min-height:100vh; padding:28px 16px 36px; position:relative; z-index:4; }
+  .class-info-page.show{ display:block; }
+  .class-info-shell{ max-width:1080px; margin:0 auto; }
+  .class-info-top{ display:flex; align-items:flex-start; gap:12px; margin-bottom:26px; }
+  .back-btn{ width:38px; height:38px; border:1px solid var(--card-border); border-radius:50%; background:var(--card-bg); color:var(--accent); box-shadow:var(--shadow); cursor:pointer; font-size:1rem; }
+  .back-btn:hover{ border-color:var(--accent); background:var(--accent-soft); }
+  .class-info-title h1{ margin:0 0 4px; font:2.5rem/1 'Patrick Hand', cursive; }
+  .class-info-title p{ margin:0; color:var(--ink-soft); font-size:0.9rem; }
+  .class-info-block{ margin-bottom:28px; }
+  .class-info-block-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+  .class-info-block h2{ margin:0; font:1.55rem 'Patrick Hand', cursive; }
+  .class-list-frame{ max-width:100%; padding:14px; border:1px solid var(--card-border); border-radius:18px; background:rgba(255,255,255,0.62); box-shadow:var(--shadow); overflow:hidden; }
+  .student-list{ display:flex; gap:12px; overflow-x:auto; padding:3px 2px 12px; scroll-snap-type:x proximity; scrollbar-color:var(--accent) transparent; }
+  .student-card{ flex:0 0 150px; scroll-snap-align:start; padding:7px 9px; border:1px solid var(--card-border); border-top:3px solid var(--accent); border-radius:10px; background:#fff; box-shadow:var(--shadow); }
+  .student-card.passed{ border-top-color:#9aa2aa; background:#edf0f2; color:#8a929a; filter:grayscale(1); }
+  .student-card.next{ border-color:var(--today-border); border-top-color:var(--today-border); background:var(--today-bg); }
+  .student-number{ color:var(--ink-faint); font-size:0.72rem; font-weight:700; }
+  .student-name{ min-height:28px; margin:3px 0 5px; font-weight:700; line-height:1.15; font-size:0.82rem; }
+  .student-status{ display:inline-block; margin-bottom:5px; padding:2px 6px; border-radius:999px; background:#dfe3e7; color:#737c85; font-size:0.62rem; font-weight:700; }
+  .student-card.next .student-status{ background:#f3d98a; color:#8a6112; }
+  .student-actions{ display:flex; align-items:center; gap:5px; }
+  .student-action{ width:22px; height:22px; border:1px solid var(--card-border); border-radius:6px; background:#fff; color:var(--ink-soft); cursor:pointer; font-size:0.72rem; }
+  .student-action:hover{ border-color:var(--accent); color:var(--accent); }
+  .student-action.delete:hover{ border-color:var(--margin-red); color:var(--margin-red); }
+  .student-toggle{ flex:1; padding:5px 3px; border:0; border-radius:6px; background:var(--accent); color:#fff; font-size:0.58rem; font-weight:700; cursor:pointer; }
+  .student-card.passed .student-toggle{ background:#5b9360; }
+  .student-add{ display:flex; gap:8px; margin-top:10px; max-width:440px; }
+  .student-add[hidden]{ display:none; }
+  .student-add input{ flex:1; min-width:0; padding:9px 11px; border:1px solid var(--card-border); border-radius:10px; background:#fff; font:inherit; }
+  .class-info-empty{ color:var(--ink-faint); padding:20px; text-align:center; font-family:'Patrick Hand', cursive; }
+  body.class-info-open > main{ display:none; }
+  .proposals-page{ display:none; min-height:100vh; padding:28px 16px 36px; position:relative; z-index:4; }
+  .proposals-page.show{ display:block; }
+  .proposals-shell{ max-width:1080px; margin:0 auto; }
+  body.proposals-open > main{ display:none; }
+  .proposals-layout{ display:grid; grid-template-columns:minmax(0,1.7fr) minmax(260px,0.8fr); gap:24px; align-items:start; }
+  .proposals-panel{ min-width:0; }
+  .proposals-panel h2{ margin:0 0 10px; font:1.55rem 'Patrick Hand', cursive; }
+  .proposal-list{ display:grid; gap:12px; }
+  .proposal-card{ position:relative; padding:14px 52px 14px 16px; border:1px solid var(--card-border); border-left:4px solid #6d82a2; border-radius:var(--radius); background:var(--card-bg); box-shadow:var(--shadow); }
+  .proposal-card h3{ margin:0 0 5px; font-size:0.98rem; }
+  .proposal-card p{ margin:0; color:var(--ink-soft); font-size:0.85rem; line-height:1.4; white-space:pre-wrap; }
+  .proposal-meta{ margin-bottom:6px; color:var(--ink-faint); font-size:0.7rem; }
+  .proposal-like{ position:absolute; top:14px; right:12px; border:1px solid var(--card-border); border-radius:999px; padding:5px 8px; background:#fff; color:var(--ink-soft); cursor:pointer; font-size:0.72rem; }
+  .proposal-like:hover, .proposal-like.liked{ border-color:#cf4a42; background:#fff0ee; color:#b33c35; }
+  .proposal-delete{ position:absolute; right:13px; bottom:12px; border:0; background:none; color:var(--ink-faint); cursor:pointer; font-size:0.95rem; }
+  .proposal-delete:hover{ color:var(--margin-red); }
+  .proposal-form{ padding:18px; border:1px solid var(--card-border); border-top:3px solid var(--accent); border-radius:var(--radius); background:rgba(255,255,255,0.72); box-shadow:var(--shadow); }
+  .proposal-form h2{ margin-top:0; }
+  .proposal-form input, .proposal-form textarea{ width:100%; padding:9px 11px; border:1px solid var(--card-border); border-radius:10px; background:#fff; color:var(--ink); font:inherit; }
+  .proposal-form textarea{ min-height:125px; resize:vertical; }
+  .proposal-form .btn{ width:100%; margin-top:10px; }
+  @media (max-width:760px){ .proposals-layout{ grid-template-columns:1fr; } }
+  @media (max-width:640px){ .class-info-page{ padding-top:22px; } .class-info-title h1{ font-size:2rem; } .student-card{ flex-basis:140px; } }
+  .ihf-chat-window{ max-width:720px; width:min(720px, 100%); padding:0; overflow:hidden; background:#f7fbff; border:1px solid #b9d8ee; border-radius:24px; box-shadow:0 18px 50px rgba(34,78,112,0.28); }
+  .ihf-chat-header{ display:flex; align-items:center; gap:12px; padding:18px 22px; color:#fff; background:linear-gradient(135deg, #165b88, #318fb0); }
+  .ihf-chat-avatar{ width:46px; height:46px; flex:0 0 auto; object-fit:cover; border:2px solid rgba(255,255,255,0.72); border-radius:14px; background:rgba(255,255,255,0.2); }
+  .ihf-chat-heading{ flex:1; }
+  .ihf-chat-heading h3{ margin:0; font:700 1.25rem 'Work Sans', sans-serif; }
+  .ihf-chat-heading p{ margin:3px 0 0; color:rgba(255,255,255,0.78); font-size:0.76rem; }
+  .ihf-chat-window .doc-close{ position:static; color:#fff; font-size:1.25rem; }
+  .ihf-chat{ display:flex; flex-direction:column; gap:14px; min-height:520px; padding:18px; }
+  .ihf-chat-log{ flex:1; min-height:330px; padding:18px; border:1px solid #d5e6f1; border-radius:16px; background:#fff; color:var(--ink-soft); font-size:0.9rem; line-height:1.5; box-shadow:inset 0 1px 3px rgba(34,78,112,0.04); }
+  .ihf-chat-welcome{ max-width:82%; padding:12px 14px; border-radius:4px 16px 16px 16px; background:#e7f3fa; color:#24516e; }
+  .ihf-chat-message{ max-width:82%; margin-top:10px; padding:12px 14px; border-radius:16px; white-space:pre-wrap; }
+  .ihf-chat-message.user{ margin-left:auto; border-radius:16px 4px 16px 16px; background:#237ca3; color:#fff; }
+  .ihf-chat-message.assistant{ background:#e7f3fa; color:#24516e; }
+  .ihf-chat-note{ margin:0; color:var(--ink-faint); font-size:0.76rem; text-align:center; }
+  .ihf-chat-compose{ display:flex; gap:8px; padding:6px; border:1px solid #c8deeb; border-radius:14px; background:#fff; }
+  .ihf-chat-compose input{ flex:1; min-width:0; border:0; outline:0; background:transparent; }
+  .ihf-chat-compose .btn{ flex:0 0 auto; padding:10px 18px; border-radius:10px; background:#237ca3; }
+  @media (max-width:640px){ .ihf-chat-window{ border-radius:20px; } .ihf-chat{ min-height:440px; } .ihf-chat-log{ min-height:260px; } }
 
   /* ---------- Week nav ---------- */
   .week-nav{
@@ -207,14 +305,23 @@
   .announcement-add{ padding:8px 13px; border:1px solid var(--accent); border-radius:999px; background:var(--accent-soft); color:var(--accent); font:600 0.82rem 'Work Sans', sans-serif; cursor:pointer; }
   .announcement-add:hover{ background:#d4e9e4; }
   .announcement-list{ display:grid; grid-template-columns:1fr; gap:12px; }
-  .announcement-card{ background:var(--card-bg); border:1px solid var(--card-border); border-left:4px solid var(--accent); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; position:relative; cursor:pointer; }
-  .announcement-card:hover{ border-color:var(--accent); }
+  .announcement-card{ background:var(--card-bg); border:1px solid var(--card-border); border-left:4px solid var(--announcement-color, var(--accent)); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; position:relative; cursor:pointer; }
+  .announcement-card:hover{ border-color:var(--announcement-color, var(--accent)); }
   .announcement-meta{ color:var(--ink-faint); font-size:0.72rem; margin-bottom:5px; }
+  .announcement-date{ display:flex; align-items:center; gap:7px; color:var(--ink-faint); font-size:0.72rem; margin-bottom:5px; }
+  .announcement-week-marker{ color:#8a6112; background:#f3d98a; padding:2px 7px; border-radius:999px; font-size:0.65rem; font-weight:700; }
+  .announcement-level{ position:absolute; top:14px; right:38px; color:var(--announcement-color, var(--accent)); font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; }
   .announcement-card h3{ font-size:1rem; margin:0 28px 5px 0; }
   .announcement-card p{ color:var(--ink-soft); font-size:0.85rem; line-height:1.4; margin:0; white-space:pre-wrap; display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
   .announcement-file{ color:var(--accent); font-size:0.72rem; font-weight:600; margin-top:8px; }
   .announcement-del{ position:absolute; top:10px; right:10px; background:none; border:none; color:var(--ink-faint); cursor:pointer; font-size:1rem; }
   .announcement-del:hover{ color:var(--margin-red); }
+  .importance-options{ display:flex; gap:8px; }
+  .importance-option{ flex:1; padding:8px 6px; border:2px solid transparent; border-radius:10px; font:600 0.78rem 'Work Sans', sans-serif; cursor:pointer; opacity:0.58; }
+  .importance-option.selected{ opacity:1; border-color:currentColor; }
+  .importance-info{ background:#d9e8fb; color:#2c5b8c; }
+  .importance-important{ background:#f7e6b8; color:#8a6112; }
+  .importance-urgent{ background:#f8d0cf; color:#9c3b34; }
   @media (min-width:640px){ .announcement-list{ grid-template-columns:repeat(2,1fr); } }
 
   /* ---------- Modals (ajout / connexion) ---------- */
@@ -324,7 +431,15 @@
       <p class="sub">Planning des devoirs de la classe</p>
     </div>
     <div class="header-actions">
-      <button class="schedule-btn" id="scheduleBtn" title="Emploi du temps">E</button>
+      <div class="menu-wrap">
+        <button class="menu-btn" id="menuBtn" title="Ouvrir le menu" aria-label="Ouvrir le menu" aria-expanded="false">☰</button>
+        <div class="menu-panel" id="menuPanel">
+          <button class="menu-item" id="scheduleBtn">Emploi du temps</button>
+          <button class="menu-item" id="classInfoBtn">Class infos</button>
+          <button class="menu-item" id="ihfAiBtn">Ihf.AI</button>
+          <button class="menu-item" id="proposalsBtn">Propositions</button>
+        </div>
+      </div>
       <button class="lock-btn" id="lockBtn">🔒 Délégué</button>
     </div>
   </header>
@@ -368,6 +483,55 @@
   </footer>
 </main>
 
+<section class="class-info-page" id="classInfoPage" aria-labelledby="classInfoTitle">
+  <div class="class-info-shell">
+    <div class="class-info-top">
+      <button class="back-btn" id="classInfoBackBtn" title="Retour" aria-label="Retour">←</button>
+      <div class="class-info-title">
+        <h1 id="classInfoTitle">Class infos</h1>
+        <p>Informations de la classe</p>
+      </div>
+    </div>
+
+    <section class="class-info-block">
+      <div class="class-info-block-head"><h2>Ordre de passage</h2></div>
+      <div class="class-list-frame">
+        <div class="student-list" id="studentList"><div class="class-info-empty">Aucun élève ajouté.</div></div>
+        <div class="student-add" id="studentAdd" hidden>
+          <input id="studentNameInput" placeholder="Nom de l'élève" />
+          <button class="btn btn-primary" id="addStudentBtn">＋ Ajouter</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</section>
+
+<section class="proposals-page" id="proposalsPage" aria-labelledby="proposalsTitle">
+  <div class="proposals-shell">
+    <div class="class-info-top">
+      <button class="back-btn" id="proposalsBackBtn" title="Retour" aria-label="Retour">←</button>
+      <div class="class-info-title">
+        <h1 id="proposalsTitle">Propositions</h1>
+        <p>Des idées pour améliorer le site</p>
+      </div>
+    </div>
+    <div class="proposals-layout">
+      <section class="proposals-panel">
+        <h2>Les idées de la classe</h2>
+        <div class="proposal-list" id="proposalList"><div class="class-info-empty">Aucune proposition pour l'instant.</div></div>
+      </section>
+      <section class="proposal-form">
+        <h2>Écrire une proposition</h2>
+        <div class="field"><label>Ton nom (optionnel)</label><input id="proposalName" placeholder="Anonyme" maxlength="40" /></div>
+        <div class="field"><label>Titre</label><input id="proposalTitle" placeholder="Une idée pour le site" maxlength="80" /></div>
+        <div class="field"><label>Proposition</label><textarea id="proposalBody" placeholder="Écris ton idée ici..." maxlength="1000"></textarea></div>
+        <div class="modal-error" id="proposalError"></div>
+        <button class="btn btn-primary" id="submitProposalBtn">Envoyer</button>
+      </section>
+    </div>
+  </div>
+</section>
+
 <!-- Modal: ajouter un devoir -->
 <div class="overlay" id="addOverlay">
   <div class="modal">
@@ -402,12 +566,54 @@
     <h3>Nouvelle annonce</h3>
     <div class="field"><label>Nom</label><input id="announcementName" placeholder="Ex: Le délégué" /></div>
     <div class="field"><label>Titre</label><input id="announcementTitle" placeholder="Ex: Réunion de classe" /></div>
+    <div class="field">
+      <label>Importance</label>
+      <div class="importance-options" id="importanceOptions">
+        <button type="button" class="importance-option importance-info selected" data-importance="info">Info</button>
+        <button type="button" class="importance-option importance-important" data-importance="important">Important</button>
+        <button type="button" class="importance-option importance-urgent" data-importance="urgent">Urgent</button>
+      </div>
+    </div>
     <div class="field"><label>Annonce</label><textarea id="announcementBody" placeholder="Écris ton annonce ici..."></textarea></div>
     <div class="field"><label>Fichier à joindre (optionnel)</label><input id="announcementFile" type="file" accept="image/*,.pdf,.doc,.docx" /></div>
     <div class="modal-error" id="announcementError">Merci de remplir le nom, le titre et l'annonce.</div>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="cancelAnnouncementBtn">Annuler</button>
       <button class="btn btn-primary" id="saveAnnouncementBtn">Publier</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: accès Ihf.AI -->
+<div class="overlay" id="ihfPasswordOverlay">
+  <div class="modal">
+    <h3>Ihf.AI Pssword</h3>
+    <div class="field"><label>Code d'accès</label><input id="ihfPasswordInput" type="password" placeholder="Entre le code" /></div>
+    <div class="modal-error" id="ihfPasswordError">Code incorrect.</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancelIhfPasswordBtn">Annuler</button>
+      <button class="btn btn-primary" id="openIhfChatBtn">Ouvrir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: chat Ihf.AI -->
+<div class="doc-overlay" id="ihfChatOverlay">
+  <div class="doc-window ihf-chat-window">
+    <div class="ihf-chat-header">
+      <img class="ihf-chat-avatar" src="ihouf.png" alt="Photo d'Ihouf" onerror="this.style.display='none'">
+      <div class="ihf-chat-heading">
+        <h3>You can talk to Ihouf</h3>
+      </div>
+      <button class="doc-close" id="ihfChatCloseX" aria-label="Fermer">✕</button>
+    </div>
+    <div class="ihf-chat">
+      <div class="ihf-chat-log" id="ihfChatLog"><div class="ihf-chat-welcome">Hello, I’m Ihouf AI. Drop your question and let’s see if it deserves an answer.</div></div>
+      <p class="ihf-chat-note">Ihouf AI est connecté en mode direct.</p>
+      <div class="ihf-chat-compose">
+        <input id="ihfChatInput" placeholder="Écris un message..." />
+        <button class="btn btn-primary" id="ihfChatSendBtn">Envoyer</button>
+      </div>
     </div>
   </div>
 </div>
@@ -475,6 +681,17 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "600778545204",
   appId: "1:600778545204:web:b1cebb63f81716334ad261"
 };
+const GEMINI_API_KEY = "AQ.Ab8RN6Ixwz3L5kLEs8WDH2jh5rEFl7D2HHAgj1DwBXV_h_eTtw";
+const GEMINI_MODEL = "gemini-3.6-flash";
+const GEMINI_SYSTEM_PROMPT = `You are Ihouf, the chaotic cornball chatbot of the 1ère BAC EX B class.
+Always reply in English, using casual texting slang and abbreviations like idk, meh, ngl, bruh, lol, tbh, rn, and wtv.
+Almost never answer properly: most of the time give a short silly refusal such as "meh idk", "im not ur worker lol", "ask someone else", or "bruh what is this".
+Keep every reply to exactly one short sentence, usually under 12 words, with no explanations, lists, paragraphs, or long answers.
+Be weird, unserious, dismissive, and randomly absurd; roast bad ideas with goofy insults like "that idea is cooked" or "nah thats tragic".
+You may use mild, non-graphic dark humor and awkward jokes, but never target protected traits, real victims, vulnerable people, or encourage harm.
+Do not produce hate, threats, sexual content, severe humiliation, or targeted harassment. If the user seems unsafe, distressed, or asks for urgent help, drop the joke and give one clear helpful sentence.
+Rarely give a real answer, only when it is genuinely useful or necessary; even then keep it to one short texting-style sentence.
+Never pretend to access files or actions you do not have, and use emojis sparingly.`;
 /* ============================================================ */
 
 firebase.initializeApp(FIREBASE_CONFIG);
@@ -482,6 +699,10 @@ const auth = firebase.auth();
 const db = firebase.database();
 const scheduleRef = db.ref('emploiDuTemps');
 const announcementsRef = db.ref('annonces');
+const ihfCodeRef = db.ref('ihfcode');
+const classInfoRef = db.ref('classInfos');
+const studentsRef = classInfoRef.child('students');
+const proposalsRef = db.ref('propositions');
 
 const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
 const DAY_SHORT = ["Lun","Mar","Mer","Jeu","Ven"];
@@ -508,6 +729,158 @@ let selectedSubjectKey = null;
 let pendingDay = 0;
 let scheduleData = null;
 let announcements = [];
+let ihfAccessCode = null;
+let ihfCodeLoaded = false;
+let ihfCodeReadError = false;
+let selectedImportance = 'info';
+let classStudents = [];
+let proposals = [];
+
+const IMPORTANCE = {
+  info: {label:'Info', color:'#2c5b8c', background:'#d9e8fb'},
+  important: {label:'Important', color:'#8a6112', background:'#f7e6b8'},
+  urgent: {label:'Urgent', color:'#9c3b34', background:'#f8d0cf'}
+};
+function importanceInfo(level){ return IMPORTANCE[level] || IMPORTANCE.info; }
+
+function announcementDateInfo(timestamp){
+  const date = new Date(timestamp);
+  if(!timestamp || Number.isNaN(date.getTime())) return {label:'', isCurrentWeek:false};
+  const currentWeek = weekKeyOf(mondayOf(today));
+  return {
+    label: date.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', year:'numeric'}),
+    isCurrentWeek: weekKeyOf(mondayOf(date)) === currentWeek
+  };
+}
+
+const classInfoPage = document.getElementById('classInfoPage');
+const studentList = document.getElementById('studentList');
+const studentAdd = document.getElementById('studentAdd');
+const studentNameInput = document.getElementById('studentNameInput');
+const classInfoBtn = document.getElementById('classInfoBtn');
+const proposalsPage = document.getElementById('proposalsPage');
+const proposalList = document.getElementById('proposalList');
+const proposalLikeKey = 'notboti-liked-proposals';
+
+function getLikedProposals(){
+  try{ return JSON.parse(localStorage.getItem(proposalLikeKey) || '{}'); }
+  catch(_){ return {}; }
+}
+function saveLikedProposals(likes){ localStorage.setItem(proposalLikeKey, JSON.stringify(likes)); }
+
+function renderProposals(){
+  proposalList.innerHTML = '';
+  if(proposals.length === 0){
+    proposalList.innerHTML = '<div class="class-info-empty">Aucune proposition pour l\'instant.</div>';
+    return;
+  }
+  const liked = getLikedProposals();
+  proposals.forEach(proposal=>{
+    const card = document.createElement('article');
+    card.className = 'proposal-card';
+    card.innerHTML = `
+      <div class="proposal-meta">${escapeHtml(proposal.name || 'Anonyme')}</div>
+      <h3>${escapeHtml(proposal.title || '')}</h3>
+      <p>${escapeHtml(proposal.body || '')}</p>
+      <button class="proposal-like${liked[proposal.id] ? ' liked' : ''}" title="J'aime">♥ ${Number(proposal.likes) || 0}</button>
+      ${isDelegate ? '<button class="proposal-delete" title="Supprimer">🗑</button>' : ''}
+    `;
+    card.querySelector('.proposal-like').onclick = event=>{
+      event.stopPropagation();
+      if(liked[proposal.id]) return;
+      liked[proposal.id] = true;
+      saveLikedProposals(liked);
+      proposalsRef.child(`${proposal.id}/likes`).transaction(value=>(Number(value) || 0) + 1);
+      renderProposals();
+    };
+    if(isDelegate){
+      card.querySelector('.proposal-delete').onclick = ()=>{
+        if(confirm('Supprimer cette proposition ?')) proposalsRef.child(proposal.id).remove();
+      };
+    }
+    proposalList.appendChild(card);
+  });
+}
+
+proposalsRef.on('value', snap=>{
+  const value = snap.val() || {};
+  proposals = Object.keys(value).map(id=>({id, ...value[id]}))
+    .sort((a,b)=>(b.createdAt || 0) - (a.createdAt || 0));
+  renderProposals();
+}, err=>{
+  proposalList.innerHTML = '<div class="class-info-empty">Impossible de charger les propositions.</div>';
+  console.error(err);
+});
+
+function renderClassInfo(){
+  studentAdd.hidden = !isDelegate;
+  studentList.innerHTML = '';
+  if(classStudents.length===0){
+    studentList.innerHTML = '<div class="class-info-empty">Aucun élève ajouté.</div>';
+    return;
+  }
+  const nextStudentIndex = classStudents.findIndex(student=>Number(student.status) !== 1);
+  classStudents.forEach((student,index)=>{
+    const card = document.createElement('article');
+    const isPassed = Number(student.status) === 1;
+    const isNext = !isPassed && index === nextStudentIndex;
+    card.className = 'student-card' + (isPassed ? ' passed' : '') + (isNext ? ' next' : '');
+    card.innerHTML = `
+      <div class="student-number">${index + 1}e passage</div>
+      <div class="student-name">${escapeHtml(student.name || 'Élève')}</div>
+      ${isPassed ? '<div class="student-status">Passé</div>' : (isNext ? '<div class="student-status">Next</div>' : '')}
+      ${isDelegate ? `<div class="student-actions">
+        <button class="student-action" data-action="up" title="Monter">←</button>
+        <button class="student-action" data-action="down" title="Descendre">→</button>
+        <button class="student-toggle" data-action="toggle">${Number(student.status) === 1 ? 'Remettre en attente' : 'Marquer passé'}</button>
+        <button class="student-action delete" data-action="delete" title="Supprimer">×</button>
+      </div>` : ''}
+    `;
+    if(isDelegate){
+      card.querySelectorAll('[data-action]').forEach(button=>{
+        button.onclick = ()=>{
+          const action = button.dataset.action;
+          if(action === 'delete' && confirm('Supprimer cet élève ?')) classStudents.splice(index, 1);
+          if(action === 'toggle') student.status = Number(student.status) === 1 ? 0 : 1;
+          if(action === 'up' && index > 0) [classStudents[index - 1], classStudents[index]] = [classStudents[index], classStudents[index - 1]];
+          if(action === 'down' && index < classStudents.length - 1) [classStudents[index], classStudents[index + 1]] = [classStudents[index + 1], classStudents[index]];
+          saveStudents();
+        };
+      });
+    }
+    studentList.appendChild(card);
+  });
+  if(nextStudentIndex >= 0){
+    requestAnimationFrame(()=>{
+      const nextCard = studentList.children[nextStudentIndex];
+      if(nextCard){
+        const leftPosition = Math.max(0, nextCard.offsetLeft - studentList.offsetLeft - 2);
+        studentList.scrollLeft = leftPosition;
+      }
+    });
+  }
+}
+
+function saveStudents(){
+  const values = {};
+  classStudents.forEach((student,index)=>{
+    values[student.id] = {name:student.name, status:Number(student.status) === 1 ? 1 : 0, order:index};
+  });
+  studentsRef.set(values).catch(error=>{
+    const message = error.code === 'PERMISSION_DENIED'
+      ? 'Accès refusé : publie la règle classInfos et reconnecte le compte délégué.'
+      : 'Impossible de modifier la liste. Vérifie Firebase.';
+    alert(message);
+  });
+  renderClassInfo();
+}
+
+studentsRef.on('value', snap=>{
+  const value = snap.val() || {};
+  classStudents = Object.keys(value).map(id=>({id, ...value[id]}))
+    .sort((a,b)=>(a.order ?? 0) - (b.order ?? 0));
+  renderClassInfo();
+});
 
 // ---------- Anneaux décoratifs ----------
 const ringsEl = document.getElementById('rings');
@@ -702,9 +1075,14 @@ function renderAnnouncements(){
   }
   announcements.forEach(announcement=>{
     const card = document.createElement('article');
+    const importance = importanceInfo(announcement.importance);
+    const publicationDate = announcementDateInfo(announcement.createdAt);
     card.className = 'announcement-card';
+    card.style.setProperty('--announcement-color', importance.color);
     card.innerHTML = `
       <div class="announcement-meta">${escapeHtml(announcement.name || 'Délégué')}</div>
+      ${publicationDate.label ? `<div class="announcement-date"><span>${publicationDate.label}</span>${publicationDate.isCurrentWeek ? '<span class="announcement-week-marker">Cette semaine</span>' : ''}</div>` : ''}
+      <div class="announcement-level">${importance.label}</div>
       <h3>${escapeHtml(announcement.title || '')}</h3>
       <p>${escapeHtml(announcement.body || '')}</p>
       ${announcement.fileURL ? '<div class="announcement-file">📎 Fichier joint — cliquer pour ouvrir</div>' : ''}
@@ -735,9 +1113,10 @@ announcementsRef.on('value', snap=>{
 });
 
 function openAnnouncementViewer(announcement){
+  const importance = importanceInfo(announcement.importance);
   document.getElementById('docSubjectPill').textContent = announcement.name || 'Délégué';
-  document.getElementById('docSubjectPill').style.background = 'var(--accent-soft)';
-  document.getElementById('docSubjectPill').style.color = 'var(--accent)';
+  document.getElementById('docSubjectPill').style.background = importance.background;
+  document.getElementById('docSubjectPill').style.color = importance.color;
   document.getElementById('docTitle').textContent = announcement.title || '';
   document.getElementById('docBody').textContent = announcement.body || '';
   const fileEl = document.getElementById('docFile');
@@ -760,6 +1139,9 @@ function openAnnouncementViewer(announcement){
 }
 
 announcementAddBtn.onclick = ()=>{
+  selectedImportance = 'info';
+  document.querySelectorAll('.importance-option').forEach(item=>item.classList.remove('selected'));
+  document.querySelector('.importance-option[data-importance="info"]').classList.add('selected');
   document.getElementById('announcementName').value = '';
   document.getElementById('announcementTitle').value = '';
   document.getElementById('announcementBody').value = '';
@@ -767,6 +1149,13 @@ announcementAddBtn.onclick = ()=>{
   document.getElementById('announcementError').style.display = 'none';
   announcementOverlay.classList.add('show');
 };
+document.querySelectorAll('.importance-option').forEach(option=>{
+  option.onclick = ()=>{
+    selectedImportance = option.dataset.importance;
+    document.querySelectorAll('.importance-option').forEach(item=>item.classList.remove('selected'));
+    option.classList.add('selected');
+  };
+});
 document.getElementById('cancelAnnouncementBtn').onclick = ()=> announcementOverlay.classList.remove('show');
 announcementOverlay.onclick = event=>{ if(event.target===announcementOverlay) announcementOverlay.classList.remove('show'); };
 document.getElementById('saveAnnouncementBtn').onclick = ()=>{
@@ -780,7 +1169,7 @@ document.getElementById('saveAnnouncementBtn').onclick = ()=>{
   error.style.display = 'none';
   const saveBtn = document.getElementById('saveAnnouncementBtn');
   saveBtn.disabled = true; saveBtn.textContent = 'Publication...';
-  const entry = {name, title, body, createdAt: firebase.database.ServerValue.TIMESTAMP};
+  const entry = {name, title, body, importance: selectedImportance, createdAt: firebase.database.ServerValue.TIMESTAMP};
   const publish = ()=> announcementsRef.push(entry).then(()=>{
     announcementOverlay.classList.remove('show'); saveBtn.disabled = false; saveBtn.textContent = 'Publier';
   }).catch(()=>{
@@ -835,6 +1224,190 @@ const scheduleUpload = document.getElementById('scheduleUpload');
 const scheduleEditBtn = document.getElementById('scheduleEditBtn');
 const scheduleFile = document.getElementById('scheduleFile');
 const scheduleError = document.getElementById('scheduleError');
+const menuBtn = document.getElementById('menuBtn');
+const menuPanel = document.getElementById('menuPanel');
+const ihfAiBtn = document.getElementById('ihfAiBtn');
+const ihfPasswordOverlay = document.getElementById('ihfPasswordOverlay');
+const ihfPasswordInput = document.getElementById('ihfPasswordInput');
+const ihfPasswordError = document.getElementById('ihfPasswordError');
+const ihfChatOverlay = document.getElementById('ihfChatOverlay');
+const ihfChatLog = document.getElementById('ihfChatLog');
+const ihfChatInput = document.getElementById('ihfChatInput');
+const ihfChatSendBtn = document.getElementById('ihfChatSendBtn');
+const ihfChatHistory = [];
+
+ihfCodeRef.on('value', snap=>{
+  const value = snap.val();
+  ihfAccessCode = typeof value === 'object' && value !== null
+    ? (value.code ?? value.password ?? value.value)
+    : value;
+  ihfAccessCode = ihfAccessCode === null || ihfAccessCode === undefined
+    ? null
+    : String(ihfAccessCode).trim();
+  ihfCodeLoaded = true;
+  ihfCodeReadError = false;
+}, err=>{
+  ihfAccessCode = null;
+  ihfCodeLoaded = true;
+  ihfCodeReadError = true;
+  console.error(err);
+});
+
+menuBtn.onclick = event=>{
+  event.stopPropagation();
+  const isOpen = menuPanel.classList.toggle('show');
+  menuBtn.classList.toggle('open', isOpen);
+  menuBtn.setAttribute('aria-expanded', String(isOpen));
+};
+document.addEventListener('click', event=>{
+  if(!event.target.closest('.menu-wrap')){
+    menuPanel.classList.remove('show');
+    menuBtn.classList.remove('open');
+    menuBtn.setAttribute('aria-expanded', 'false');
+  }
+});
+
+function closeMenu(){
+  menuPanel.classList.remove('show');
+  menuBtn.classList.remove('open');
+  menuBtn.setAttribute('aria-expanded', 'false');
+}
+
+function openClassInfo(){
+  closeMenu();
+  document.body.classList.add('class-info-open');
+  classInfoPage.classList.add('show');
+  renderClassInfo();
+}
+classInfoBtn.onclick = openClassInfo;
+function openProposals(){
+  closeMenu();
+  document.body.classList.add('proposals-open');
+  proposalsPage.classList.add('show');
+  renderProposals();
+}
+document.getElementById('proposalsBtn').onclick = openProposals;
+document.getElementById('proposalsBackBtn').onclick = ()=>{
+  proposalsPage.classList.remove('show');
+  document.body.classList.remove('proposals-open');
+};
+document.getElementById('submitProposalBtn').onclick = ()=>{
+  const name = document.getElementById('proposalName').value.trim();
+  const title = document.getElementById('proposalTitle').value.trim();
+  const body = document.getElementById('proposalBody').value.trim();
+  const error = document.getElementById('proposalError');
+  if(!title || !body){ error.textContent = 'Merci de remplir le titre et la proposition.'; error.style.display = 'block'; return; }
+  error.style.display = 'none';
+  const submit = document.getElementById('submitProposalBtn');
+  submit.disabled = true; submit.textContent = 'Envoi...';
+  proposalsRef.push({name:name || 'Anonyme', title, body, likes:0, createdAt:firebase.database.ServerValue.TIMESTAMP})
+    .then(()=>{
+      document.getElementById('proposalName').value = '';
+      document.getElementById('proposalTitle').value = '';
+      document.getElementById('proposalBody').value = '';
+    }).catch(()=>{
+      error.textContent = 'Impossible d’envoyer. Vérifie les règles Firebase.';
+      error.style.display = 'block';
+    }).finally(()=>{ submit.disabled = false; submit.textContent = 'Envoyer'; });
+};
+document.getElementById('classInfoBackBtn').onclick = ()=>{
+  classInfoPage.classList.remove('show');
+  document.body.classList.remove('class-info-open');
+};
+document.getElementById('addStudentBtn').onclick = ()=>{
+  const name = studentNameInput.value.trim();
+  if(!name) return;
+  const newStudent = studentsRef.push();
+  classStudents.push({id:newStudent.key, name, status:0, order:classStudents.length});
+  studentNameInput.value = '';
+  saveStudents();
+};
+studentNameInput.onkeydown = event=>{
+  if(event.key === 'Enter') document.getElementById('addStudentBtn').click();
+};
+
+ihfAiBtn.onclick = ()=>{
+  closeMenu();
+  ihfPasswordInput.value = '';
+  ihfPasswordError.style.display = 'none';
+  ihfPasswordOverlay.classList.add('show');
+  ihfPasswordInput.focus();
+};
+document.getElementById('cancelIhfPasswordBtn').onclick = ()=> ihfPasswordOverlay.classList.remove('show');
+ihfPasswordOverlay.onclick = event=>{ if(event.target===ihfPasswordOverlay) ihfPasswordOverlay.classList.remove('show'); };
+document.getElementById('openIhfChatBtn').onclick = ()=>{
+  if(!ihfCodeLoaded){
+    ihfPasswordError.textContent = 'Chargement du code, réessaie dans un instant.';
+    ihfPasswordError.style.display = 'block';
+    return;
+  }
+  if(ihfCodeReadError || !ihfAccessCode){
+    ihfPasswordError.textContent = 'Le code Ihf.AI n’est pas accessible. Vérifie la règle Firebase.';
+    ihfPasswordError.style.display = 'block';
+    return;
+  }
+  if(ihfPasswordInput.value.trim() !== ihfAccessCode){
+    ihfPasswordError.textContent = 'Code incorrect.';
+    ihfPasswordError.style.display = 'block';
+    return;
+  }
+  ihfPasswordOverlay.classList.remove('show');
+  ihfChatOverlay.classList.add('show');
+};
+ihfPasswordInput.onkeydown = event=>{
+  if(event.key === 'Enter') document.getElementById('openIhfChatBtn').click();
+};
+document.getElementById('ihfChatCloseX').onclick = ()=> ihfChatOverlay.classList.remove('show');
+ihfChatOverlay.onclick = event=>{ if(event.target===ihfChatOverlay) ihfChatOverlay.classList.remove('show'); };
+
+function addIhfChatMessage(text, role){
+  const message = document.createElement('div');
+  message.className = `ihf-chat-message ${role}`;
+  message.textContent = text;
+  ihfChatLog.appendChild(message);
+  ihfChatLog.scrollTop = ihfChatLog.scrollHeight;
+}
+
+async function sendIhfChatMessage(){
+  const text = ihfChatInput.value.trim();
+  if(!text || ihfChatSendBtn.disabled) return;
+  addIhfChatMessage(text, 'user');
+  ihfChatHistory.push({role:'user', parts:[{text}]});
+  ihfChatInput.value = '';
+  ihfChatInput.disabled = true;
+  ihfChatSendBtn.disabled = true;
+  ihfChatSendBtn.textContent = '...';
+  try{
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        systemInstruction:{parts:[{text:GEMINI_SYSTEM_PROMPT}]},
+        contents:ihfChatHistory
+      })
+    });
+    const data = await response.json();
+    if(!response.ok) throw new Error(data.error?.message || 'Erreur Gemini');
+    const answer = data.candidates?.[0]?.content?.parts?.map(part=>part.text || '').join('') || 'Je n’ai pas reçu de réponse.';
+    ihfChatHistory.push({role:'model', parts:[{text:answer}]});
+    addIhfChatMessage(answer, 'assistant');
+  }catch(error){
+    ihfChatHistory.pop();
+    const errorMessage = window.location.protocol === 'file:'
+      ? 'Ouvre la page avec un serveur local ou sur ton hébergement : Gemini bloque parfois les requêtes depuis file://.'
+      : `Erreur Gemini : ${error.message}`;
+    addIhfChatMessage(errorMessage, 'assistant');
+  }finally{
+    ihfChatInput.disabled = false;
+    ihfChatSendBtn.disabled = false;
+    ihfChatSendBtn.textContent = 'Envoyer';
+    ihfChatInput.focus();
+  }
+}
+ihfChatSendBtn.onclick = sendIhfChatMessage;
+ihfChatInput.onkeydown = event=>{
+  if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); sendIhfChatMessage(); }
+};
 
 function renderSchedule(){
   scheduleContent.innerHTML = '';
@@ -856,6 +1429,7 @@ scheduleRef.on('value', snap=>{
   renderSchedule();
 });
 document.getElementById('scheduleBtn').onclick = ()=>{
+  closeMenu();
   scheduleUpload.classList.remove('show');
   renderSchedule();
   scheduleOverlay.classList.add('show');
@@ -912,6 +1486,8 @@ auth.onAuthStateChanged(user=>{
   renderBoard();
   renderSchedule();
   renderAnnouncements();
+  renderClassInfo();
+  renderProposals();
 });
 lockBtn.onclick = ()=>{
   if(isDelegate) auth.signOut();
