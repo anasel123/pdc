@@ -916,7 +916,13 @@ function weekKeyOf(monday){ return `${monday.getFullYear()}-${pad(monday.getMont
 
 const today = new Date(); today.setHours(0,0,0,0);
 const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+const todayDow = today.getDay();
+if(todayDow===5) tomorrow.setDate(today.getDate()+3);
+else if(todayDow===6) tomorrow.setDate(today.getDate()+2);
+else if(todayDow===0) tomorrow.setDate(today.getDate()+1);
+const showTomorrowChip = todayDow===0;
 const thisMonday = mondayOf(today);
+if(!sameDay(mondayOf(tomorrow), thisMonday)) weekOffset = 1;
 if(activeDay===null){
   const dow = tomorrow.getDay();
   activeDay = (dow>=1 && dow<=5) ? dow-1 : 0;
@@ -1009,7 +1015,7 @@ function renderBoard(){
       <div class="dh-left">
         <h2>${d}</h2>
         <span class="d-date">${fmtDDMM(date)}</span>
-        ${isFocusDay ? '<span class="d-today-chip">Demain</span>' : ''}
+        ${showTomorrowChip && isFocusDay ? '<span class="d-today-chip">Demain</span>' : ''}
       </div>
     `;
     if(isDelegate){
