@@ -61,6 +61,10 @@
          "propositions": {
            ".read": true,
            ".write": true
+         },
+         "critiques": {
+           ".read": true,
+           ".write": true
          }
        }
      }
@@ -109,16 +113,26 @@
 
   body{ padding-left:34px; position:relative; }
 
+  body.critiques-open{
+    background:
+      radial-gradient(circle at 76% 8%, rgba(126,92,190,.22), transparent 28%),
+      repeating-linear-gradient(0deg, rgba(151,128,204,.12) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(90deg, rgba(151,128,204,.08) 0 1px, transparent 1px 28px),
+      #151522;
+  }
+
   body::before{
     content:""; position:fixed; top:0; bottom:0; left:30px; width:1.5px;
     background:var(--margin-red); opacity:0.55; z-index:1;
   }
+  body.critiques-open::before{ background:#d36b86; opacity:.8; }
   .rings{ position:fixed; top:0; left:0; bottom:0; width:30px; z-index:2; pointer-events:none; }
   .rings span{
     position:absolute; left:9px; width:12px; height:12px; border-radius:50%;
     background:var(--ring);
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.18), 0 1px 0 rgba(255,255,255,0.6);
   }
+  body.critiques-open .rings span{ background:#3a394b; box-shadow:inset 0 1px 2px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.12); }
 
   main{ max-width:1080px; min-height:100vh; margin:0 auto; padding:28px 16px 0; position:relative; z-index:3; display:flex; flex-direction:column; }
 
@@ -207,6 +221,59 @@
   .proposal-form textarea{ min-height:125px; resize:vertical; }
   .proposal-form .btn{ width:100%; margin-top:10px; }
   @media (max-width:760px){ .proposals-layout{ grid-template-columns:1fr; } }
+  .critiques-page{ display:none; min-height:100vh; padding:28px 16px 48px; position:relative; z-index:4; color:#e9e5f4; background:radial-gradient(circle at 78% 7%, rgba(126,92,190,.18), transparent 25%), linear-gradient(180deg,rgba(21,21,34,.32),rgba(21,21,34,.78)); }
+  .critiques-page.show{ display:block; }
+  body.critiques-open > main{ display:none; }
+  .critiques-shell{ max-width:1080px; margin:0 auto; }
+  .critiques-page .class-info-title h1{ color:#f2effa; }
+  .critiques-page .class-info-title p{ color:#aaa0c2; }
+  .critiques-page .back-btn{ color:#e5ddf2; border-color:#51466e; background:#242238; box-shadow:0 5px 16px rgba(0,0,0,.2); }
+  .critiques-intro{ margin:0 0 22px; padding:14px 17px; border:1px solid #40365d; border-radius:12px; background:rgba(32,29,53,.82); color:#bbb2d0; font-size:.82rem; box-shadow:0 8px 24px rgba(0,0,0,.16); }
+  .critiques-layout{ display:grid; grid-template-columns:minmax(0,1.65fr) minmax(260px,.8fr); gap:24px; align-items:start; }
+  .critiques-panel h2{ margin:0 0 11px; font:1.55rem 'Patrick Hand',cursive; color:#f2effa; }
+  .critique-list{ display:grid; gap:13px; }
+  .critique-card{ position:relative; padding:16px 18px 15px 21px; border:1px solid #d5cbe5; border-left:4px solid #8c79bd; border-radius:10px; background:rgba(255,255,255,.9); box-shadow:0 10px 26px rgba(71,52,111,.11); }
+  .critique-card.positive{ border-left-color:#78b899; }
+  .critique-card.negative{ border-left-color:#d78985; }
+  .critique-meta{ display:flex; align-items:center; gap:8px; margin-bottom:7px; color:#84799c; font-size:.7rem; }
+  .critique-badge{ padding:3px 8px; border-radius:999px; font-weight:700; }
+  .critique-badge.positive{ background:#284f42; color:#a9e0bd; }
+  .critique-badge.negative{ background:#593736; color:#f0b0aa; }
+  .critique-card h3{ margin:0 0 6px; color:#403761; font-size:1rem; }
+  .critique-card > p{ margin:0; color:#625a75; font-size:.86rem; line-height:1.48; white-space:pre-wrap; }
+  .critique-tools{ display:flex; align-items:center; gap:6px; margin-top:14px; }
+  .critique-vote{ border:1px solid #cfc3e2; border-radius:6px; padding:4px 8px; background:#faf8ff; color:#756a8e; cursor:pointer; font-size:.75rem; }
+  .critique-vote:hover, .critique-vote.active{ border-color:#806ab3; color:#493d6b; background:#eee8fa; }
+  .critique-delete{ margin-left:auto; border:0; background:transparent; color:#998eae; cursor:pointer; }
+  .critique-delete:hover{ color:#b14f59; }
+  .critique-comments{ display:grid; gap:7px; margin-top:14px; padding:11px 0 0 13px; border-top:1px solid #e1d9ed; }
+  .critique-comment{ padding:8px 10px; border-left:2px solid #b8a9d4; background:#f8f5fc; color:#625a75; font-size:.79rem; line-height:1.4; }
+  .critique-comment-head{ display:flex; justify-content:space-between; gap:8px; margin-bottom:3px; color:#9186a5; font-size:.68rem; }
+  .critique-comment-actions{ display:flex; align-items:center; gap:5px; margin-top:5px; }
+  .critique-comment-actions .critique-vote{ padding:2px 6px; font-size:.68rem; }
+  .critique-comment-form{ display:flex; gap:6px; margin-top:9px; }
+  .critique-comment-form input{ flex:1; min-width:0; padding:7px 9px; border:1px solid #cfc3e2; border-radius:6px; background:#fff; color:#403761; font:inherit; font-size:.78rem; }
+  .critique-comment-form button{ border:1px solid #927fc0; border-radius:6px; background:#eee8fa; color:#554776; cursor:pointer; }
+  .critique-form{ padding:18px; border:1px solid #d0c4e3; border-top:3px solid #806ab3; border-radius:10px; background:rgba(255,255,255,.86); box-shadow:0 10px 26px rgba(71,52,111,.13); }
+  .critique-form h2{ margin-top:0; color:#403761; }
+  .critique-form input, .critique-form textarea{ width:100%; padding:9px 11px; border:1px solid #cfc3e2; border-radius:7px; background:#fff; color:#403761; font:inherit; }
+  .critique-form textarea{ min-height:125px; resize:vertical; }
+  .critique-form .btn{ width:100%; margin-top:10px; }
+  .critique-form .field label{ color:#625a75; }
+  .critique-choice{ display:flex; gap:8px; }
+  .critique-choice button{ flex:1; padding:8px 6px; border:2px solid transparent; border-radius:10px; font:600 .78rem 'Work Sans',sans-serif; cursor:pointer; opacity:.58; }
+  .critique-choice button.selected{ opacity:1; border-color:currentColor; }
+  .critique-positive{ background:#d7efdf; color:#347652; }
+  .critique-negative{ background:#f8d0cf; color:#9c3b34; }
+  .critique-notice{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(43,34,67,.48); z-index:60; }
+  .critique-notice.show{ display:flex; }
+  .critique-notice-card{ max-width:560px; padding:25px 26px 22px; border:1px solid #d4c8e7; border-top:4px solid #806ab3; border-radius:14px; background:#fffdfd; color:#51486a; box-shadow:0 20px 60px rgba(39,28,68,.24); }
+  .critique-notice-card h2{ margin:0 0 10px; color:#403761; font:1.65rem 'Patrick Hand',cursive; }
+  .critique-notice-card p{ margin:0 0 11px; font-size:.86rem; line-height:1.55; }
+  .critique-notice-card strong{ color:#403761; }
+  .critique-notice-actions{ display:flex; justify-content:flex-end; margin-top:18px; }
+  .critique-notice-actions .btn{ min-width:140px; }
+  @media (max-width:760px){ .critiques-layout{ grid-template-columns:1fr; } }
   @media (max-width:640px){ .class-info-page{ padding-top:22px; } .class-info-title h1{ font-size:2rem; } .student-card{ flex-basis:140px; } }
   .ihf-chat-window{ max-width:720px; width:min(720px, 100%); padding:0; overflow:hidden; background:#f7fbff; border:1px solid #b9d8ee; border-radius:24px; box-shadow:0 18px 50px rgba(34,78,112,0.28); }
   .ihf-chat-header{ display:flex; align-items:center; gap:12px; padding:18px 22px; color:#fff; background:linear-gradient(135deg, #165b88, #318fb0); }
@@ -456,6 +523,7 @@
           <button class="menu-item" id="classInfoBtn">Class infos</button>
           <button class="menu-item" id="ihfAiBtn">Ihf.AI</button>
           <button class="menu-item" id="proposalsBtn">Propositions</button>
+          <button class="menu-item" id="critiquesBtn">Critiques</button>
         </div>
       </div>
       <button class="lock-btn" id="lockBtn">🔒 Délégué</button>
@@ -515,6 +583,42 @@
     </div>
     <div class="announcement-list" id="allAnnouncementList">
       <div class="empty-state">Aucune annonce pour l'instant</div>
+    </div>
+  </div>
+</section>
+
+<section class="critiques-page" id="critiquesPage" aria-labelledby="critiquesTitle">
+  <div class="critiques-shell">
+    <div class="class-info-top">
+      <button class="back-btn" id="critiquesBackBtn" title="Retour" aria-label="Retour">←</button>
+      <div class="class-info-title">
+        <h1 id="critiquesTitle">Critiques</h1>
+        <p>Le forum anonyme de la classe</p>
+      </div>
+    </div>
+    <p class="critiques-intro">Un espace séparé pour dire ce qui marche ou non. Vote, réponds et reste respectueux : tout le monde apparaît en Anonyme.</p>
+    <div class="critiques-layout">
+      <section class="critiques-panel">
+        <h2>Les discussions</h2>
+        <div class="critique-list" id="critiqueList"><div class="class-info-empty">Aucune critique pour l'instant.</div></div>
+      </section>
+      <section class="critique-form">
+        <h2>Publier une critique</h2>
+        <div class="field"><label>Titre</label><input id="critiqueTitle" placeholder="Un titre clair" maxlength="80" /></div>
+        <div class="field"><label>Description</label><textarea id="critiqueBody" placeholder="Explique ton point de vue..." maxlength="1000"></textarea></div>
+        <div class="field"><label>Ton avis</label><div class="critique-choice" id="critiqueChoice"><button type="button" class="critique-positive selected" data-sentiment="positive">Positif</button><button type="button" class="critique-negative" data-sentiment="negative">Négatif</button></div></div>
+        <div class="modal-error" id="critiqueError"></div>
+        <button class="btn btn-primary" id="submitCritiqueBtn">Publier anonymement</button>
+      </section>
+    </div>
+  </div>
+  <div class="critique-notice" id="critiqueNotice" role="dialog" aria-modal="true" aria-labelledby="critiqueNoticeTitle">
+    <div class="critique-notice-card">
+      <h2 id="critiqueNoticeTitle">Avant d’entrer dans cet espace</h2>
+      <p>Les Critiques sont un espace indépendant créé pour permettre aux élèves d’exprimer leur point de vue, de partager une expérience et d’échanger anonymement.</p>
+      <p><strong>Le site et son créateur ne sont ni pour ni contre les opinions publiées ici et n’ont aucun rapport avec leur contenu.</strong> Une critique représente uniquement son auteur ; elle ne constitue pas une position officielle de la classe ou du site.</p>
+      <p>Merci de rester respectueux. Le délégué peut retirer un post ou un commentaire uniquement s’il est insultant, menaçant, discriminatoire, diffamatoire, dangereux ou clairement hors sujet. Une opinion simplement négative ou différente ne doit pas être supprimée : préserver l’authenticité des échanges est la règle.</p>
+      <div class="critique-notice-actions"><button class="btn btn-primary" id="critiqueNoticeAcceptBtn">J’ai compris</button></div>
     </div>
   </div>
 </section>
@@ -739,6 +843,7 @@ const ihfCodeRef = db.ref('ihfcode');
 const classInfoRef = db.ref('classInfos');
 const studentsRef = classInfoRef.child('students');
 const proposalsRef = db.ref('propositions');
+const critiquesRef = db.ref('critiques');
 
 const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
 const DAY_SHORT = ["Lun","Mar","Mer","Jeu","Ven"];
@@ -771,6 +876,8 @@ let ihfCodeReadError = false;
 let selectedImportance = 'info';
 let classStudents = [];
 let proposals = [];
+let critiques = [];
+let selectedCritiqueSentiment = 'positive';
 
 const IMPORTANCE = {
   info: {label:'Info', color:'#2c5b8c', background:'#d9e8fb'},
@@ -797,6 +904,11 @@ const classInfoBtn = document.getElementById('classInfoBtn');
 const proposalsPage = document.getElementById('proposalsPage');
 const proposalList = document.getElementById('proposalList');
 const proposalLikeKey = 'notboti-liked-proposals';
+const critiquesPage = document.getElementById('critiquesPage');
+const critiqueList = document.getElementById('critiqueList');
+const critiqueVoteKey = 'notboti-critique-votes';
+const critiqueNotice = document.getElementById('critiqueNotice');
+const critiqueNoticeKey = 'notboti-critiques-notice-seen';
 
 function getLikedProposals(){
   try{ return JSON.parse(localStorage.getItem(proposalLikeKey) || '{}'); }
@@ -838,6 +950,79 @@ function renderProposals(){
   });
 }
 
+function getCritiqueVotes(){
+  try{ return JSON.parse(localStorage.getItem(critiqueVoteKey) || '{}'); }
+  catch(_){ return {}; }
+}
+function saveCritiqueVotes(votes){ localStorage.setItem(critiqueVoteKey, JSON.stringify(votes)); }
+function critiqueScore(item){ return (Number(item.upvotes) || 0) - (Number(item.downvotes) || 0); }
+
+function renderCritiques(){
+  critiqueList.innerHTML = '';
+  if(critiques.length === 0){
+    critiqueList.innerHTML = '<div class="class-info-empty">Aucune critique pour l\'instant.</div>';
+    return;
+  }
+  const votes = getCritiqueVotes();
+  critiques.forEach(critique=>{
+    const sentiment = critique.sentiment === 'negative' ? 'negative' : 'positive';
+    const comments = Object.keys(critique.comments || {}).map(id=>({id, ...critique.comments[id]}))
+      .sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
+    const card = document.createElement('article');
+    card.className = `critique-card ${sentiment}`;
+    card.innerHTML = `
+      <div class="critique-meta"><span class="critique-badge ${sentiment}">${sentiment === 'positive' ? 'Positif' : 'Négatif'}</span><span>Anonyme · ${critique.createdAt ? new Date(critique.createdAt).toLocaleDateString('fr-FR') : 'à l\'instant'}</span></div>
+      <h3>${escapeHtml(critique.title || '')}</h3>
+      <p>${escapeHtml(critique.body || '')}</p>
+      <div class="critique-tools">
+        <button class="critique-vote${votes[critique.id] === 'up' ? ' active' : ''}" data-vote="up">▲ ${Number(critique.upvotes) || 0}</button>
+        <button class="critique-vote${votes[critique.id] === 'down' ? ' active' : ''}" data-vote="down">▼ ${Number(critique.downvotes) || 0}</button>
+        <span class="critique-meta">Score ${critiqueScore(critique)}</span>
+        ${isDelegate ? '<button class="critique-delete" title="Modérer un contenu irrespectueux">🗑</button>' : ''}
+      </div>
+      <div class="critique-comments">
+        ${comments.map(comment=>`
+          <div class="critique-comment">
+            <div class="critique-comment-head"><span>Anonyme</span><span>${comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('fr-FR') : 'à l\'instant'}</span></div>
+            <div>${escapeHtml(comment.body || '')}</div>
+            <div class="critique-comment-actions"><button class="critique-vote${votes[`${critique.id}:${comment.id}`] === 'up' ? ' active' : ''}" data-comment="${comment.id}" data-vote="up">▲ ${Number(comment.upvotes) || 0}</button><button class="critique-vote${votes[`${critique.id}:${comment.id}`] === 'down' ? ' active' : ''}" data-comment="${comment.id}" data-vote="down">▼ ${Number(comment.downvotes) || 0}</button>${isDelegate ? `<button class="critique-delete" data-comment-delete="${comment.id}" title="Modérer une réponse irrespectueuse">×</button>` : ''}</div>
+          </div>`).join('')}
+        <div class="critique-comment-form"><input placeholder="Répondre anonymement..." maxlength="500" /><button type="button">Répondre</button></div>
+      </div>
+    `;
+    card.querySelectorAll('[data-vote]').forEach(button=>{
+      button.onclick = ()=>{
+        const targetId = button.dataset.comment || critique.id;
+        const voteKey = button.dataset.comment ? `${critique.id}:${targetId}` : critique.id;
+        if(votes[voteKey]) return;
+        votes[voteKey] = button.dataset.vote;
+        saveCritiqueVotes(votes);
+        const targetRef = button.dataset.comment ? critiquesRef.child(`${critique.id}/comments/${targetId}`) : critiquesRef.child(critique.id);
+        targetRef.child(button.dataset.vote === 'up' ? 'upvotes' : 'downvotes').transaction(value=>(Number(value) || 0) + 1);
+        renderCritiques();
+      };
+    });
+    const commentInput = card.querySelector('.critique-comment-form input');
+    card.querySelector('.critique-comment-form button').onclick = ()=>{
+      const body = commentInput.value.trim();
+      if(!body) return;
+      critiquesRef.child(`${critique.id}/comments`).push({body, upvotes:0, downvotes:0, createdAt:firebase.database.ServerValue.TIMESTAMP});
+      commentInput.value = '';
+    };
+    if(isDelegate){
+      card.querySelector('.critique-delete').onclick = ()=>{
+        if(confirm('Ce contenu est-il insultant, menaçant, discriminatoire, diffamatoire, dangereux ou clairement hors sujet ?\n\nLa suppression ne doit pas servir à retirer une opinion simplement négative.')) critiquesRef.child(critique.id).remove();
+      };
+      card.querySelectorAll('[data-comment-delete]').forEach(button=>{
+        button.onclick = ()=>{
+          if(confirm('Cette réponse est-elle insultante, menaçante, discriminatoire, diffamatoire, dangereuse ou clairement hors sujet ?\n\nLa suppression ne doit pas servir à retirer une opinion simplement différente.')) critiquesRef.child(`${critique.id}/comments/${button.dataset.commentDelete}`).remove();
+        };
+      });
+    }
+    critiqueList.appendChild(card);
+  });
+}
+
 proposalsRef.on('value', snap=>{
   const value = snap.val() || {};
   proposals = Object.keys(value).map(id=>({id, ...value[id]}))
@@ -845,6 +1030,16 @@ proposalsRef.on('value', snap=>{
   renderProposals();
 }, err=>{
   proposalList.innerHTML = '<div class="class-info-empty">Impossible de charger les propositions.</div>';
+  console.error(err);
+});
+
+critiquesRef.on('value', snap=>{
+  const value = snap.val() || {};
+  critiques = Object.keys(value).map(id=>({id, ...value[id]}))
+    .sort((a,b)=>(b.createdAt || 0) - (a.createdAt || 0));
+  renderCritiques();
+}, err=>{
+  critiqueList.innerHTML = '<div class="class-info-empty">Impossible de charger les critiques.</div>';
   console.error(err);
 });
 
@@ -1336,6 +1531,18 @@ function openProposals(){
   renderProposals();
 }
 document.getElementById('proposalsBtn').onclick = openProposals;
+function openCritiques(){
+  closeMenu();
+  document.body.classList.add('critiques-open');
+  critiquesPage.classList.add('show');
+  renderCritiques();
+  if(localStorage.getItem(critiqueNoticeKey) !== 'true') critiqueNotice.classList.add('show');
+}
+document.getElementById('critiquesBtn').onclick = openCritiques;
+document.getElementById('critiqueNoticeAcceptBtn').onclick = ()=>{
+  localStorage.setItem(critiqueNoticeKey, 'true');
+  critiqueNotice.classList.remove('show');
+};
 document.getElementById('announcementSeeAllBtn').onclick = ()=>{
   document.body.classList.add('announcements-open');
   document.getElementById('announcementsPage').classList.add('show');
@@ -1348,6 +1555,33 @@ document.getElementById('announcementsBackBtn').onclick = ()=>{
 document.getElementById('proposalsBackBtn').onclick = ()=>{
   proposalsPage.classList.remove('show');
   document.body.classList.remove('proposals-open');
+};
+document.getElementById('critiquesBackBtn').onclick = ()=>{
+  critiquesPage.classList.remove('show');
+  document.body.classList.remove('critiques-open');
+};
+document.querySelectorAll('#critiqueChoice button').forEach(button=>{
+  button.onclick = ()=>{
+    selectedCritiqueSentiment = button.dataset.sentiment;
+    document.querySelectorAll('#critiqueChoice button').forEach(choice=>choice.classList.toggle('selected', choice === button));
+  };
+});
+document.getElementById('submitCritiqueBtn').onclick = ()=>{
+  const title = document.getElementById('critiqueTitle').value.trim();
+  const body = document.getElementById('critiqueBody').value.trim();
+  const error = document.getElementById('critiqueError');
+  if(!title || !body){ error.textContent = 'Merci de remplir le titre et la description.'; error.style.display = 'block'; return; }
+  error.style.display = 'none';
+  const submit = document.getElementById('submitCritiqueBtn');
+  submit.disabled = true; submit.textContent = 'Publication...';
+  critiquesRef.push({title, body, sentiment:selectedCritiqueSentiment, upvotes:0, downvotes:0, createdAt:firebase.database.ServerValue.TIMESTAMP})
+    .then(()=>{
+      document.getElementById('critiqueTitle').value = '';
+      document.getElementById('critiqueBody').value = '';
+    }).catch(()=>{
+      error.textContent = 'Impossible de publier. Vérifie les règles Firebase.';
+      error.style.display = 'block';
+    }).finally(()=>{ submit.disabled = false; submit.textContent = 'Publier anonymement'; });
 };
 document.getElementById('submitProposalBtn').onclick = ()=>{
   const name = document.getElementById('proposalName').value.trim();
@@ -1553,6 +1787,7 @@ auth.onAuthStateChanged(user=>{
   renderAnnouncements();
   renderClassInfo();
   renderProposals();
+  renderCritiques();
 });
 lockBtn.onclick = ()=>{
   if(isDelegate) auth.signOut();
