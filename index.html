@@ -908,7 +908,6 @@ const critiquesPage = document.getElementById('critiquesPage');
 const critiqueList = document.getElementById('critiqueList');
 const critiqueVoteKey = 'notboti-critique-votes';
 const critiqueNotice = document.getElementById('critiqueNotice');
-const critiqueNoticeKey = 'notboti-critiques-notice-seen';
 
 function getLikedProposals(){
   try{ return JSON.parse(localStorage.getItem(proposalLikeKey) || '{}'); }
@@ -1536,11 +1535,10 @@ function openCritiques(){
   document.body.classList.add('critiques-open');
   critiquesPage.classList.add('show');
   renderCritiques();
-  if(localStorage.getItem(critiqueNoticeKey) !== 'true') critiqueNotice.classList.add('show');
+  critiqueNotice.classList.add('show');
 }
 document.getElementById('critiquesBtn').onclick = openCritiques;
 document.getElementById('critiqueNoticeAcceptBtn').onclick = ()=>{
-  localStorage.setItem(critiqueNoticeKey, 'true');
   critiqueNotice.classList.remove('show');
 };
 document.getElementById('announcementSeeAllBtn').onclick = ()=>{
