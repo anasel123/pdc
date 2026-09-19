@@ -313,9 +313,16 @@
   .announcements-section{ margin-top:34px; }
   .announcements-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
   .announcements-title{ font-family:'Patrick Hand', cursive; font-size:1.65rem; margin:0; }
+  .announcements-head-actions{ display:flex; align-items:center; gap:8px; }
+  .announcement-see-all{ padding:8px 13px; border:1px solid var(--card-border); border-radius:999px; background:var(--card-bg); color:var(--accent); font:600 0.82rem 'Work Sans', sans-serif; cursor:pointer; }
+  .announcement-see-all:hover{ border-color:var(--accent); background:var(--accent-soft); }
   .announcement-add{ padding:8px 13px; border:1px solid var(--accent); border-radius:999px; background:var(--accent-soft); color:var(--accent); font:600 0.82rem 'Work Sans', sans-serif; cursor:pointer; }
   .announcement-add:hover{ background:#d4e9e4; }
   .announcement-list{ display:grid; grid-template-columns:1fr; gap:12px; }
+  .announcements-page{ display:none; min-height:100vh; padding:28px 16px 36px; position:relative; z-index:4; }
+  .announcements-page.show{ display:block; }
+  .announcements-shell{ max-width:1080px; margin:0 auto; }
+  body.announcements-open > main{ display:none; }
   .announcement-card{ background:var(--card-bg); border:1px solid var(--card-border); border-left:4px solid var(--announcement-color, var(--accent)); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; position:relative; cursor:pointer; }
   .announcement-card:hover{ border-color:var(--announcement-color, var(--accent)); }
   .announcement-meta{ color:var(--ink-faint); font-size:0.72rem; margin-bottom:5px; }
@@ -471,7 +478,10 @@
   <section class="announcements-section" aria-labelledby="announcementsTitle">
     <div class="announcements-head">
       <h2 class="announcements-title" id="announcementsTitle">Annonces</h2>
-      <button class="announcement-add" id="announcementAddBtn" hidden>＋ Publier</button>
+      <div class="announcements-head-actions">
+        <button class="announcement-see-all" id="announcementSeeAllBtn">See all</button>
+        <button class="announcement-add" id="announcementAddBtn" hidden>＋ Publier</button>
+      </div>
     </div>
     <div class="announcement-list" id="announcementList">
       <div class="empty-state">Aucune annonce pour l'instant</div>
@@ -493,6 +503,21 @@
     </div>
   </footer>
 </main>
+
+<section class="announcements-page" id="announcementsPage" aria-labelledby="allAnnouncementsTitle">
+  <div class="announcements-shell">
+    <div class="class-info-top">
+      <button class="back-btn" id="announcementsBackBtn" title="Retour" aria-label="Retour">←</button>
+      <div class="class-info-title">
+        <h1 id="allAnnouncementsTitle">Toutes les annonces</h1>
+        <p>Les annonces de la classe</p>
+      </div>
+    </div>
+    <div class="announcement-list" id="allAnnouncementList">
+      <div class="empty-state">Aucune annonce pour l'instant</div>
+    </div>
+  </div>
+</section>
 
 <section class="class-info-page" id="classInfoPage" aria-labelledby="classInfoTitle">
   <div class="class-info-shell">
@@ -1081,16 +1106,17 @@ function escapeHtml(str){
 
 // ---------- Annonces ----------
 const announcementList = document.getElementById('announcementList');
+const allAnnouncementList = document.getElementById('allAnnouncementList');
 const announcementAddBtn = document.getElementById('announcementAddBtn');
 const announcementOverlay = document.getElementById('announcementOverlay');
 
-function renderAnnouncements(){
-  announcementList.innerHTML = '';
-  if(announcements.length===0){
-    announcementList.innerHTML = '<div class="empty-state">Aucune annonce pour l\'instant</div>';
+function renderAnnouncementList(target, entries){
+  target.innerHTML = '';
+  if(entries.length===0){
+    target.innerHTML = '<div class="empty-state">Aucune annonce pour l\'instant</div>';
     return;
   }
-  announcements.forEach(announcement=>{
+  entries.forEach(announcement=>{
     const card = document.createElement('article');
     const importance = importanceInfo(announcement.importance);
     const publicationDate = announcementDateInfo(announcement.createdAt);
@@ -1115,8 +1141,13 @@ function renderAnnouncements(){
         if(confirm('Supprimer cette annonce ?')) announcementsRef.child(announcement.id).remove();
       };
     }
-    announcementList.appendChild(card);
+    target.appendChild(card);
   });
+}
+
+function renderAnnouncements(){
+  renderAnnouncementList(announcementList, announcements.slice(0, 2));
+  renderAnnouncementList(allAnnouncementList, announcements);
 }
 
 announcementsRef.on('value', snap=>{
@@ -1126,6 +1157,7 @@ announcementsRef.on('value', snap=>{
   renderAnnouncements();
 }, err=>{
   announcementList.innerHTML = '<div class="empty-state">Impossible de charger les annonces.</div>';
+  allAnnouncementList.innerHTML = '<div class="empty-state">Impossible de charger les annonces.</div>';
   console.error(err);
 });
 
@@ -1304,6 +1336,15 @@ function openProposals(){
   renderProposals();
 }
 document.getElementById('proposalsBtn').onclick = openProposals;
+document.getElementById('announcementSeeAllBtn').onclick = ()=>{
+  document.body.classList.add('announcements-open');
+  document.getElementById('announcementsPage').classList.add('show');
+  renderAnnouncementList(allAnnouncementList, announcements);
+};
+document.getElementById('announcementsBackBtn').onclick = ()=>{
+  document.getElementById('announcementsPage').classList.remove('show');
+  document.body.classList.remove('announcements-open');
+};
 document.getElementById('proposalsBackBtn').onclick = ()=>{
   proposalsPage.classList.remove('show');
   document.body.classList.remove('proposals-open');
