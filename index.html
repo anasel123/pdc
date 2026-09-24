@@ -322,6 +322,8 @@
   .day-tab.active{ background:#22304a; color:#fff; border-color:#22304a; }
   .day-tab.is-today:not(.active){ border-color:var(--today-border); color:#8a6112; background:var(--today-bg); }
   .day-tab.is-past:not(.active){ color:var(--ink-faint); }
+  .move-hint{ display:none; margin:0 0 12px; padding:9px 12px; border:1px dashed var(--accent); border-radius:10px; background:var(--accent-soft); color:var(--accent); font-size:.8rem; text-align:center; }
+  .move-hint.show{ display:block; }
 
   /* ---------- Board ---------- */
   .board{ display:grid; grid-template-columns:1fr; gap:18px; }
@@ -359,6 +361,10 @@
     background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--radius);
     box-shadow:var(--shadow); padding:12px 14px; cursor:pointer; position:relative;
   }
+  .task[draggable="true"]{ cursor:grab; }
+  .task.dragging{ opacity:.45; }
+  .day-col.drop-target .day-col-inner{ outline:2px dashed var(--accent); outline-offset:4px; background:var(--accent-soft); }
+  .task.move-selected{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(47,111,102,.18), var(--shadow); }
   .task-top{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:5px; padding-right:22px; }
   .subject-pill{ font-size:0.72rem; font-weight:700; padding:2px 9px; border-radius:999px; white-space:nowrap; }
   .task-title{ font-weight:600; font-size:0.95rem; margin:2px 0 3px; }
@@ -542,6 +548,8 @@
   </div>
 
   <div class="day-tabs" id="dayTabs"></div>
+
+  <div class="move-hint" id="moveHint">Carte sélectionnée : touche un jour pour la déplacer.</div>
 
   <div class="board" id="board"></div>
 
@@ -880,6 +888,7 @@ let classStudents = [];
 let proposals = [];
 let critiques = [];
 let selectedCritiqueSentiment = 'positive';
+let selectedTaskForMove = null;
 
 const IMPORTANCE = {
   info: {label:'Info', color:'#2c5b8c', background:'#d9e8fb'},
@@ -1208,7 +1217,13 @@ function renderTabs(){
     const btn = document.createElement('button');
     btn.className = 'day-tab' + (i===activeDay?' active':'') + (isFocusDay?' is-today':'') + (isPast?' is-past':'');
     btn.textContent = DAY_SHORT[i];
-    btn.onclick = ()=>{ activeDay=i; renderTabs(); renderBoard(); };
+    btn.onclick = ()=>{
+      if(selectedTaskForMove){
+        moveTaskToDay(selectedTaskForMove, i);
+        return;
+      }
+      activeDay=i; renderTabs(); renderBoard();
+    };
     dayTabsEl.appendChild(btn);
   });
 }
@@ -1226,6 +1241,21 @@ function renderBoard(){
 
     const col = document.createElement('div');
     col.className = 'day-col' + (i===activeDay?' visible':'') + (isFocusDay?' is-today':'') + (isPast?' is-past':'');
+    col.dataset.day = i;
+    if(isDelegate){
+      col.ondragover = event=>{
+        event.preventDefault();
+        col.classList.add('drop-target');
+      };
+      col.ondragleave = ()=> col.classList.remove('drop-target');
+      col.ondrop = event=>{
+        event.preventDefault();
+        col.classList.remove('drop-target');
+        const taskId = event.dataTransfer.getData('text/plain');
+        const task = allTasks.find(item=>item.id === taskId);
+        if(task) moveTaskToDay(task, i);
+      };
+    }
 
     const inner = document.createElement('div');
     inner.className = 'day-col-inner';
@@ -1262,6 +1292,8 @@ function renderBoard(){
     tasks.forEach(t=>{
       const li = document.createElement('li');
       li.className = 'task';
+      li.draggable = isDelegate && window.innerWidth >= 860;
+      if(selectedTaskForMove && selectedTaskForMove.id === t.id) li.classList.add('move-selected');
       const s = subjectInfo(t.subject);
       li.innerHTML = `
         <div class="task-top">
@@ -1274,8 +1306,25 @@ function renderBoard(){
       `;
       li.onclick = (e)=>{
         if(e.target.classList.contains('task-del')) return;
+        if(isDelegate && window.innerWidth < 860){
+          selectedTaskForMove = selectedTaskForMove?.id === t.id ? null : t;
+          document.getElementById('moveHint').classList.toggle('show', !!selectedTaskForMove);
+          renderBoard();
+          return;
+        }
         openDocViewer(t);
       };
+      if(li.draggable){
+        li.ondragstart = event=>{
+          event.dataTransfer.setData('text/plain', t.id);
+          event.dataTransfer.effectAllowed = 'move';
+          li.classList.add('dragging');
+        };
+        li.ondragend = ()=>{
+          li.classList.remove('dragging');
+          document.querySelectorAll('.drop-target').forEach(target=>target.classList.remove('drop-target'));
+        };
+      }
       if(isDelegate){
         li.querySelector('.task-del').onclick = (e)=>{
           e.stopPropagation();
@@ -1292,6 +1341,20 @@ function renderBoard(){
     col.appendChild(inner);
     boardEl.appendChild(col);
   });
+}
+
+function moveTaskToDay(task, targetDay){
+  if(!isDelegate || task.day === targetDay) return;
+  const weekKey = weekKeyOf(getDisplayedMonday());
+  const payload = {...task};
+  delete payload.id;
+  delete payload.day;
+  selectedTaskForMove = null;
+  document.getElementById('moveHint').classList.remove('show');
+  db.ref().update({
+    [`devoirs/${weekKey}/${task.day}/${task.id}`]: null,
+    [`devoirs/${weekKey}/${targetDay}/${task.id}`]: payload
+  }).catch(()=> alert('Impossible de déplacer ce devoir. Vérifie Firebase.'));
 }
 
 function escapeHtml(str){
